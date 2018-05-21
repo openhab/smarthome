@@ -4,7 +4,7 @@
   <parent>
     <artifactId>karaf-features</artifactId>
     <groupId>org.eclipse.smarthome</groupId>
-    <version>0.10.0-SNAPSHOT</version>
+    <version>0.10.0.oh230RC1</version>
   </parent>
 
   <artifactId>esh-tp</artifactId>
