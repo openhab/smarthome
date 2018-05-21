@@ -40,9 +40,9 @@
 
   <distributionManagement>
     <repository>
-      <id>repo.eclipse.org</id>
-      <name>Eclipse SmartHome Repository - Releases</name>
-      <url>https://repo.eclipse.org/content/repositories/smarthome-releases/</url>
+      <id>bintray</id>
+      <name>openHAB SmartHome Repository - Releases</name>
+      <url>https://api.bintray.com/maven/openhab/mvn/smarthome/;publish=1;override=1</url>
     </repository>
     <snapshotRepository>
       <id>repo.eclipse.org</id>
