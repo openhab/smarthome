@@ -3,7 +3,7 @@
 
   <groupId>org.eclipse.smarthome</groupId>
   <artifactId>smarthome</artifactId>
-  <version>0.10.0-SNAPSHOT</version>
+  <version>0.10.0.oh230RC2</version>
 
   <packaging>pom</packaging>
 
@@ -54,6 +54,7 @@
       <connection>scm:git:${scm.gitBaseUrl}/smarthome.git</connection>
       <developerConnection>scm:git:${scm.gitBaseUrl}/smarthome.git</developerConnection>
       <url>https://github.com/openhab/smarthome</url>
+<tag>0.10.0.oh230RC2</tag>
   </scm>
 
   <properties>

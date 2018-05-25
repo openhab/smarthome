@@ -5,7 +5,7 @@
   <parent>
     <artifactId>pom</artifactId>
     <groupId>org.eclipse.smarthome.binding</groupId>
-    <version>0.10.0-SNAPSHOT</version>
+    <version>0.10.0.oh230RC2</version>
   </parent>
 
   <artifactId>org.eclipse.smarthome.binding.bluetooth.bluez</artifactId>
