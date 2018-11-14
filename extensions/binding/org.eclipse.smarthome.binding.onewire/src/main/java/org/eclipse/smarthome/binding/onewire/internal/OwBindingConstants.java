@@ -23,6 +23,7 @@ import java.util.regex.Pattern;
 import org.eclipse.jdt.annotation.NonNullByDefault;
 import org.eclipse.smarthome.binding.onewire.internal.device.OwSensorType;
 import org.eclipse.smarthome.core.thing.ThingTypeUID;
+import org.eclipse.smarthome.core.thing.type.ChannelTypeUID;
 
 /**
  * The {@link OneWireBinding} class defines common constants, which are
@@ -48,11 +49,12 @@ public class OwBindingConstants {
     public static final ThingTypeUID THING_TYPE_MS_TV = new ThingTypeUID(BINDING_ID, "ms-tv");
     public static final ThingTypeUID THING_TYPE_BMS = new ThingTypeUID(BINDING_ID, "bms");
     public static final ThingTypeUID THING_TYPE_AMS = new ThingTypeUID(BINDING_ID, "ams");
+    public static final ThingTypeUID THING_TYPE_COUNTER2 = new ThingTypeUID(BINDING_ID, "counter2");
 
     public static final Set<ThingTypeUID> SUPPORTED_THING_TYPES = new HashSet<>(
             Arrays.asList(THING_TYPE_OWSERVER, THING_TYPE_TEMPERATURE, THING_TYPE_IBUTTON, THING_TYPE_DIGITALIO,
                     THING_TYPE_DIGITALIO2, THING_TYPE_DIGITALIO8, THING_TYPE_AMS, THING_TYPE_BMS, THING_TYPE_MS_TH,
-                    THING_TYPE_MS_THS, THING_TYPE_MS_TV));
+                    THING_TYPE_MS_THS, THING_TYPE_MS_TV, THING_TYPE_COUNTER2));
 
     // List of all config options
     public static final String CONFIG_ADDRESS = "network-address";
@@ -60,6 +62,7 @@ public class OwBindingConstants {
 
     public static final String CONFIG_ID = "id";
     public static final String CONFIG_RESOLUTION = "resolution";
+    public static final String CONFIG_IGNORE_POR = "ignorepor";
     public static final String CONFIG_REFRESH = "refresh";
     public static final String CONFIG_DIGITALREFRESH = "digitalrefresh";
     public static final String CONFIG_OFFSET = "offset";
@@ -87,7 +90,9 @@ public class OwBindingConstants {
     public static final String CHANNEL_SUPPLYVOLTAGE = "supplyvoltage";
     public static final String CHANNEL_VOLTAGE = "voltage";
     public static final String CHANNEL_CURRENT = "current";
+    public static final String CHANNEL_PRESSURE = "pressure";
     public static final String CHANNEL_DIGITAL = "digital";
+    public static final String CHANNEL_COUNTER = "counter";
 
     // Maps for Discovery
     public static final Map<OwSensorType, ThingTypeUID> THING_TYPE_MAP;
@@ -98,6 +103,8 @@ public class OwBindingConstants {
         initThingTypeMap.put(OwSensorType.DS1420, THING_TYPE_IBUTTON);
         initThingTypeMap.put(OwSensorType.DS18B20, THING_TYPE_TEMPERATURE);
         initThingTypeMap.put(OwSensorType.DS18S20, THING_TYPE_TEMPERATURE);
+        initThingTypeMap.put(OwSensorType.DS1822, THING_TYPE_TEMPERATURE);
+        initThingTypeMap.put(OwSensorType.DS1923, THING_TYPE_MS_TH);
         initThingTypeMap.put(OwSensorType.DS2401, THING_TYPE_IBUTTON);
         initThingTypeMap.put(OwSensorType.DS2405, THING_TYPE_DIGITALIO);
         initThingTypeMap.put(OwSensorType.DS2406, THING_TYPE_DIGITALIO2);
@@ -110,6 +117,7 @@ public class OwBindingConstants {
         initThingTypeMap.put(OwSensorType.BMS_S, THING_TYPE_BMS);
         initThingTypeMap.put(OwSensorType.AMS, THING_TYPE_AMS);
         initThingTypeMap.put(OwSensorType.AMS_S, THING_TYPE_AMS);
+        initThingTypeMap.put(OwSensorType.DS2423, THING_TYPE_COUNTER2);
         THING_TYPE_MAP = Collections.unmodifiableMap(initThingTypeMap);
 
         Map<ThingTypeUID, String> initThingLabelMap = new HashMap<ThingTypeUID, String>();
@@ -123,8 +131,15 @@ public class OwBindingConstants {
         initThingLabelMap.put(THING_TYPE_MS_TV, "Multisensor");
         initThingLabelMap.put(THING_TYPE_BMS, "Elaborated Networks BMS");
         initThingLabelMap.put(THING_TYPE_AMS, "Elaborated Networks AMS");
+        initThingLabelMap.put(THING_TYPE_COUNTER2, "Dual Counter");
         THING_LABEL_MAP = Collections.unmodifiableMap(initThingLabelMap);
     }
 
     public static final Pattern SENSOR_ID_PATTERN = Pattern.compile("^\\/?([0-9A-Fa-f]{2}\\.[0-9A-Fa-f]{12})$");
+
+    public static final ChannelTypeUID CHANNEL_TYPE_UID_TEMPERATURE = new ChannelTypeUID(BINDING_ID, "temperature");
+    public static final ChannelTypeUID CHANNEL_TYPE_UID_TEMPERATURE_POR = new ChannelTypeUID(BINDING_ID,
+            "temperature-por");
+    public static final ChannelTypeUID CHANNEL_TYPE_UID_TEMPERATURE_POR_RES = new ChannelTypeUID(BINDING_ID,
+            "temperature-por-res");
 }

@@ -12,8 +12,13 @@
  */
 package org.eclipse.smarthome.binding.mqtt.generic.internal.convention.homie300;
 
+import java.util.Map;
+import java.util.TreeMap;
+
 import org.eclipse.jdt.annotation.NonNullByDefault;
-import org.eclipse.smarthome.binding.mqtt.generic.internal.mapping.MapToField;
+import org.eclipse.smarthome.binding.mqtt.generic.internal.mapping.AbstractMqttAttributeClass;
+import org.eclipse.smarthome.binding.mqtt.generic.internal.mapping.MQTTvalueTransform;
+import org.eclipse.smarthome.binding.mqtt.generic.internal.mapping.MandatoryField;
 import org.eclipse.smarthome.binding.mqtt.generic.internal.mapping.TopicPrefix;
 
 /**
@@ -23,7 +28,7 @@ import org.eclipse.smarthome.binding.mqtt.generic.internal.mapping.TopicPrefix;
  */
 @NonNullByDefault
 @TopicPrefix
-public class PropertyAttributes {
+public class PropertyAttributes extends AbstractMqttAttributeClass {
     // Lower-case enum value names required. Those are identifiers for the MQTT/homie protocol.
     public enum DataTypeEnum {
         unknown,
@@ -35,10 +40,38 @@ public class PropertyAttributes {
         color_
     }
 
-    public String name = "";
+    public @MandatoryField String name = "";
+
+    /**
+     * stateful + non-settable: The node publishes a property state (temperature sensor)
+     * stateful + settable: The node publishes a property state, and can receive commands for the property (by
+     * controller or other party) (lamp power)
+     * stateless + non-settable: The node publishes momentary events (door bell pressed)
+     * stateless + settable: The node publishes momentary events, and can receive commands for the property (by
+     * controller or other party) (brew coffee)
+     */
     public boolean settable = false;
+    public boolean retained = true;
     public String unit = "";
-    public @MapToField(suffix = "_") DataTypeEnum datatype = DataTypeEnum.unknown;
+    public @MandatoryField @MQTTvalueTransform(suffix = "_") DataTypeEnum datatype = DataTypeEnum.unknown;
     public String format = "";
 
+    @Override
+    public Object getFieldsOf() {
+        return this;
+    }
+
+    /**
+     * Return a map with all field values.
+     */
+    public Map<String, Object> asMap() {
+        Map<String, Object> properties = new TreeMap<>();
+        properties.put("unit", unit);
+        properties.put("name", name);
+        properties.put("settable", settable ? "true" : "false");
+        properties.put("retained", retained ? "true" : "false");
+        properties.put("format", format);
+        properties.put("datatype", datatype.name());
+        return properties;
+    }
 }

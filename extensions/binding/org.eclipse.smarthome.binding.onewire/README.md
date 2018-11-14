@@ -15,7 +15,7 @@ The `owserver` is the bridge that connects to an existing OWFS installation.
 
 ### Things
 
-There are three types of things: the generic ones (`digitalio`, `digitalio2`, `digitalio8`, `ibutton`, `temperature`), multisensors built around the DS2438 chip (`ms-th`, `ms-tv`) and more advanced sensors from Elaborated Networks (www.wiregate.de) (`ams`, `bms`). 
+There are three types of things: the generic ones (`counter2`, `digitalio`, `digitalio2`, `digitalio8`, `ibutton`, `temperature`), multisensors built around the DS2438 chip (`ms-th`, `ms-tv`) and more advanced sensors from Elaborated Networks (www.wiregate.de) (`ams`, `bms`). 
 
 ## Discovery
 
@@ -43,6 +43,14 @@ It supports both, a hostname or an IP address.
 The `port` parameter is used to adjust non-standard OWFS installations.
 It defaults to `4304`, which is the default of each OWFS installation.  
   
+### Counter (`counter2`)
+
+The counter thing supports the DS2423 chip, a dual counter.
+Two `counterX` channels are supported. 
+
+It has two parameters: sensor id `id` and refresh time `refresh`.
+ 
+
 ### Digital I/O (`digitalio`, `digitalio2`, `digitalio8`) 
 
 The digital I/O things support the DS2405, DS2406, DS2408 and DS2413 chips.
@@ -64,6 +72,9 @@ The multisensor with humidity is build  around the DS2438 chipset.
 It provides a `temperature`, a `humidity` and a `supplyvoltage` channel.
 The voltage input of the DS2438 is connected to a humidity sensor, several common types are supported (see below).
 
+The generic sensor with humidity and temperature using DS1923 chipset. 
+It provides a `temperature` and `humidity` channels.
+
 It has two parameters: sensor id `id` and refresh time `refresh`.
 
 ### Multisensor with Voltage (`ms-tv`)
@@ -75,7 +86,7 @@ It has two parameters: sensor id `id` and refresh time `refresh`.
 
 ### Temperature sensor (`temperature`)
 
-The temperature thing supports DS18S20 and DS18B20 sensors.
+The temperature thing supports DS18S20, DS18B20 and DS1822 sensors.
 It provides only the `temperature` channel.
 
 It has two parameters: sensor id `id` and refresh time `refresh`. 
@@ -112,6 +123,7 @@ The correct formula for the ambient light is automatically determined from the s
 | Type-ID         | Thing                       | Item    | readonly   | Description                                        |
 |-----------------|-----------------------------|---------|------------|----------------------------------------------------|
 | current         | multisensors                | Number  | yes        | current (if light option not installed)            |
+| counter         | counter2                    | Number  | yes        | countervalue                                       |
 | digital         | digitalX, AMS               | Switch  | no         | digital, can be configured as input or output      |
 | humidity        | multisensors (except ms-tv) | Number  | yes        | relative humidity                                  |
 | light           | ams, bms                    | Number  | yes        | lightness (if installed)                           |
@@ -140,12 +152,21 @@ Possible options are `/humidity` for HIH-3610 sensors, `/HIH4000/humidity` for H
 
 ### Temperature (`temperature`)
 
-The `temperature` channel has one parameter: `resolution`.
+The `temperature` channel has three types: `temperature`, `temperature-por`and `temperature-por-res`.
+If the channel-type is `temperature`, there is nothing else to configure.
 
+Some sensors (e.g. DS18x20) report 85 °C as Power-On-Reset value.
+In some installations this leads to errorneous temperature readings.
+If the `ignorepor` parameter is set to `true` 85 °C values will be filtered.
+The default is `false` as correct reading of 85 °C will otherwise be filtered, too.
+
+A channel of type `temperature-por-res` has one parameter: `resolution`.
 OneWire temperature sensors are capable of different resolutions: `9`, `10`, `11` and `12` bits.
 This corresponds to 0.5 °C, 0.25 °C, 0.125 °C, 0.0625 °C respectively.
 The conversion time is inverse to that and ranges from 95 ms to 750 ms.
 For best performance it is recommended to set the resolution only as high as needed. 
+ 
+The correct channel-type is selected automatically by the thing handler depending on the sensor type.
  
 ## Full Example
 

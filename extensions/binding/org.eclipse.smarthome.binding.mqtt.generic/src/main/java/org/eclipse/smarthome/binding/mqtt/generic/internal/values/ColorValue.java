@@ -25,6 +25,7 @@ import org.eclipse.smarthome.core.library.types.StringType;
 import org.eclipse.smarthome.core.types.Command;
 import org.eclipse.smarthome.core.types.State;
 import org.eclipse.smarthome.core.types.StateDescription;
+import org.eclipse.smarthome.core.types.UnDefType;
 
 /**
  * Implements a color value.
@@ -36,7 +37,8 @@ import org.eclipse.smarthome.core.types.StateDescription;
  * @author David Graeff - Initial contribution
  */
 @NonNullByDefault
-public class ColorValue implements AbstractMqttThingValue {
+public class ColorValue implements Value {
+    private State state = UnDefType.UNDEF;
     private HSBType colorValue;
     private final boolean isRGB;
     private final String onValue;
@@ -72,7 +74,7 @@ public class ColorValue implements AbstractMqttThingValue {
 
     @Override
     public State getValue() {
-        return colorValue;
+        return state;
     }
 
     /**
@@ -111,31 +113,35 @@ public class ColorValue implements AbstractMqttThingValue {
         } else {
             throw new IllegalArgumentException("Didn't recognise the color value " + command.toString());
         }
+        state = colorValue;
         return colorValue.toString();
     }
 
     /**
      * Updates the color value.
      *
-     * @param updatedValue Expects hue,saturation,brightness as comma separated string. hue is in the range [0,360],
-     *            saturation and brightness are in [0,100]. If rgb is enabled, a string red,green,blue is
-     *            expected.
-     *            red,green,blue are within [0,255].
+     * @param updatedValue Expects hue,saturation,brightness as comma separated string.
+     *            hue is in the range [0,360], saturation and brightness are in [0,100].
+     *            If rgb is enabled, a string red,green,blue is expected. red,green,blue are within [0,255].
+     *            ON/OFF (case insensitive) are also accepted to set the brightness to full and off.
+     *            If a single integer value is received, it is interpreted as a brightness value.
      * @return Returns the color value as HSB/HSV string (hue, saturation, brightness) eg. "60, 100, 100".
      *         If rgb is enabled, an RGB string (red,green,blue) will be returned instead. red,green,blue are within
      *         [0,255].
      */
     @Override
     public State update(String updatedValue) throws IllegalArgumentException {
-        if (onValue.equals(updatedValue) || "ON".equals(updatedValue.toUpperCase()) || "1".equals(updatedValue)) {
+        if (onValue.equals(updatedValue)) {
             PercentType minOn = new PercentType(Math.max(colorValue.getBrightness().intValue(), 10));
             colorValue = new HSBType(colorValue.getHue(), colorValue.getSaturation(), minOn);
-        } else if (offValue.equals(updatedValue) || "OFF".equals(updatedValue.toUpperCase())
-                || "0".equals(updatedValue)) {
+        } else if (offValue.equals(updatedValue)) {
             colorValue = new HSBType(colorValue.getHue(), colorValue.getSaturation(), new PercentType(0));
-        } else {
+        } else if (updatedValue.indexOf(',') > 0) {
             colorValue = new HSBType(updatedValue);
+        } else { // single integer value
+            colorValue = new HSBType(colorValue.getHue(), colorValue.getSaturation(), new PercentType(updatedValue));
         }
+        state = colorValue;
         return colorValue;
     }
 
@@ -147,5 +153,10 @@ public class ColorValue implements AbstractMqttThingValue {
     @Override
     public StateDescription createStateDescription(String unit, boolean readOnly) {
         return new StateDescription(null, null, null, "%s " + unit, readOnly, Collections.emptyList());
+    }
+
+    @Override
+    public void resetState() {
+        state = UnDefType.UNDEF;
     }
 }

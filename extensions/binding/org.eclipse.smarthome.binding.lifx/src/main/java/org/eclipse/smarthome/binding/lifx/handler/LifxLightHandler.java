@@ -13,7 +13,8 @@
 package org.eclipse.smarthome.binding.lifx.handler;
 
 import static org.eclipse.smarthome.binding.lifx.LifxBindingConstants.*;
-import static org.eclipse.smarthome.binding.lifx.internal.util.LifxMessageUtil.increaseDecreasePercentType;
+import static org.eclipse.smarthome.binding.lifx.internal.protocol.Product.Feature.*;
+import static org.eclipse.smarthome.binding.lifx.internal.util.LifxMessageUtil.*;
 
 import java.net.InetSocketAddress;
 import java.time.Duration;
@@ -45,7 +46,7 @@ import org.eclipse.smarthome.binding.lifx.internal.protocol.GetRequest;
 import org.eclipse.smarthome.binding.lifx.internal.protocol.GetWifiInfoRequest;
 import org.eclipse.smarthome.binding.lifx.internal.protocol.Packet;
 import org.eclipse.smarthome.binding.lifx.internal.protocol.PowerState;
-import org.eclipse.smarthome.binding.lifx.internal.protocol.Products;
+import org.eclipse.smarthome.binding.lifx.internal.protocol.Product;
 import org.eclipse.smarthome.binding.lifx.internal.protocol.SignalStrength;
 import org.eclipse.smarthome.config.core.Configuration;
 import org.eclipse.smarthome.core.library.types.DecimalType;
@@ -86,7 +87,7 @@ public class LifxLightHandler extends BaseThingHandler {
     private static final Duration MAX_STATE_CHANGE_DURATION = Duration.ofSeconds(4);
 
     private final LifxChannelFactory channelFactory;
-    private @NonNullByDefault({}) Products product;
+    private @NonNullByDefault({}) Product product;
 
     private @Nullable PercentType powerOnBrightness;
     private @Nullable HSBType powerOnColor;
@@ -168,7 +169,8 @@ public class LifxLightHandler extends BaseThingHandler {
 
             updateStateIfChanged(CHANNEL_COLOR, hsb);
             updateStateIfChanged(CHANNEL_BRIGHTNESS, hsb.getBrightness());
-            updateStateIfChanged(CHANNEL_TEMPERATURE, updateColor.getTemperature());
+            updateStateIfChanged(CHANNEL_TEMPERATURE,
+                    kelvinToPercentType(updateColor.getKelvin(), product.getTemperatureRange()));
 
             updateZoneChannels(powerState, colors);
         }
@@ -197,7 +199,7 @@ public class LifxLightHandler extends BaseThingHandler {
         }
 
         private void updateZoneChannels(@Nullable PowerState powerState, HSBK[] colors) {
-            if (!product.isMultiZone() || colors.length == 0) {
+            if (!product.hasFeature(MULTIZONE) || colors.length == 0) {
                 return;
             }
 
@@ -211,7 +213,8 @@ public class LifxLightHandler extends BaseThingHandler {
                 HSBK color = colors[i];
                 HSBK updateColor = nullSafeUpdateColor(powerState, color);
                 updateStateIfChanged(CHANNEL_COLOR_ZONE + i, updateColor.getHSB());
-                updateStateIfChanged(CHANNEL_TEMPERATURE_ZONE + i, updateColor.getTemperature());
+                updateStateIfChanged(CHANNEL_TEMPERATURE_ZONE + i,
+                        kelvinToPercentType(updateColor.getKelvin(), product.getTemperatureRange()));
             }
         }
 
@@ -318,7 +321,7 @@ public class LifxLightHandler extends BaseThingHandler {
     private @Nullable PercentType getPowerOnBrightness() {
         Channel channel = null;
 
-        if (product.isColor()) {
+        if (product.hasFeature(COLOR)) {
             ChannelUID channelUID = new ChannelUID(getThing().getUID(), LifxBindingConstants.CHANNEL_COLOR);
             channel = getThing().getChannel(channelUID.getId());
         } else {
@@ -338,7 +341,7 @@ public class LifxLightHandler extends BaseThingHandler {
     private @Nullable HSBType getPowerOnColor() {
         Channel channel = null;
 
-        if (product.isColor()) {
+        if (product.hasFeature(COLOR)) {
             ChannelUID channelUID = new ChannelUID(getThing().getUID(), LifxBindingConstants.CHANNEL_COLOR);
             channel = getThing().getChannel(channelUID.getId());
         }
@@ -368,13 +371,13 @@ public class LifxLightHandler extends BaseThingHandler {
         return null;
     }
 
-    private Products getProduct() {
+    private Product getProduct() {
         String propertyValue = getThing().getProperties().get(LifxBindingConstants.PROPERTY_PRODUCT_ID);
         try {
             long productID = Long.parseLong(propertyValue);
-            return Products.getProductFromProductID(productID);
+            return Product.getProductFromProductID(productID);
         } catch (IllegalArgumentException e) {
-            return Products.getLikelyProduct(getThing().getThingTypeUID());
+            return Product.getLikelyProduct(getThing().getThingTypeUID());
         }
     }
 
@@ -541,14 +544,14 @@ public class LifxLightHandler extends BaseThingHandler {
     private void handleTemperatureCommand(PercentType temperature) {
         HSBK newColor = getLightStateForCommand().getColor();
         newColor.setSaturation(PercentType.ZERO);
-        newColor.setTemperature(temperature);
+        newColor.setKelvin(percentTypeToKelvin(temperature, product.getTemperatureRange()));
         getLightStateForCommand().setColor(newColor);
     }
 
     private void handleTemperatureCommand(PercentType temperature, int zoneIndex) {
         HSBK newColor = getLightStateForCommand().getColor(zoneIndex);
         newColor.setSaturation(PercentType.ZERO);
-        newColor.setTemperature(temperature);
+        newColor.setKelvin(percentTypeToKelvin(temperature, product.getTemperatureRange()));
         getLightStateForCommand().setColor(newColor, zoneIndex);
     }
 
@@ -576,7 +579,8 @@ public class LifxLightHandler extends BaseThingHandler {
 
         PercentType localPowerOnTemperature = powerOnTemperature;
         if (localPowerOnTemperature != null && onOff == OnOffType.ON) {
-            getLightStateForCommand().setTemperature(localPowerOnTemperature);
+            getLightStateForCommand()
+                    .setTemperature(percentTypeToKelvin(localPowerOnTemperature, product.getTemperatureRange()));
         }
 
         if (powerOnBrightness != null) {
@@ -599,13 +603,15 @@ public class LifxLightHandler extends BaseThingHandler {
     }
 
     private void handleIncreaseDecreaseTemperatureCommand(IncreaseDecreaseType increaseDecrease) {
-        PercentType baseTemperature = getLightStateForCommand().getColor().getTemperature();
+        PercentType baseTemperature = kelvinToPercentType(getLightStateForCommand().getColor().getKelvin(),
+                product.getTemperatureRange());
         PercentType newTemperature = increaseDecreasePercentType(increaseDecrease, baseTemperature);
         handleTemperatureCommand(newTemperature);
     }
 
     private void handleIncreaseDecreaseTemperatureCommand(IncreaseDecreaseType increaseDecrease, int zoneIndex) {
-        PercentType baseTemperature = getLightStateForCommand().getColor(zoneIndex).getTemperature();
+        PercentType baseTemperature = kelvinToPercentType(getLightStateForCommand().getColor(zoneIndex).getKelvin(),
+                product.getTemperatureRange());
         PercentType newTemperature = increaseDecreasePercentType(increaseDecrease, baseTemperature);
         handleTemperatureCommand(newTemperature, zoneIndex);
     }

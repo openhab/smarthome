@@ -18,6 +18,8 @@ import java.util.stream.Stream;
 
 import org.eclipse.jdt.annotation.NonNullByDefault;
 import org.eclipse.jdt.annotation.Nullable;
+import org.eclipse.smarthome.binding.mqtt.generic.internal.generic.MqttChannelTypeProvider;
+import org.eclipse.smarthome.binding.mqtt.generic.internal.generic.TransformationServiceProvider;
 import org.eclipse.smarthome.binding.mqtt.generic.internal.handler.GenericThingHandler;
 import org.eclipse.smarthome.binding.mqtt.generic.internal.handler.HomeAssistantThingHandler;
 import org.eclipse.smarthome.binding.mqtt.generic.internal.handler.HomieThingHandler;
@@ -45,7 +47,8 @@ import org.osgi.service.component.annotations.Reference;
 public class MqttThingHandlerFactory extends BaseThingHandlerFactory implements TransformationServiceProvider {
     private @Nullable MqttChannelTypeProvider provider;
     private static final Set<ThingTypeUID> SUPPORTED_THING_TYPES_UIDS = Stream
-            .of(MqttBindingConstants.GENERIC_MQTT_THING, MqttBindingConstants.HOMIE300_MQTT_THING)
+            .of(MqttBindingConstants.GENERIC_MQTT_THING, MqttBindingConstants.HOMIE300_MQTT_THING,
+                    MqttBindingConstants.HOMEASSISTANT_MQTT_THING)
             .collect(Collectors.toSet());
 
     @Override

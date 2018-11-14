@@ -16,16 +16,21 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
 
+import org.apache.commons.lang.StringUtils;
 import org.eclipse.jdt.annotation.NonNullByDefault;
 import org.eclipse.jdt.annotation.Nullable;
-import org.eclipse.smarthome.binding.mqtt.generic.internal.ChannelState;
-import org.eclipse.smarthome.binding.mqtt.generic.internal.ChannelStateUpdateListener;
-import org.eclipse.smarthome.binding.mqtt.generic.internal.ChannelStateWithTransformation;
-import org.eclipse.smarthome.binding.mqtt.generic.internal.MqttChannelTypeProvider;
-import org.eclipse.smarthome.binding.mqtt.generic.internal.TransformationServiceProvider;
-import org.eclipse.smarthome.binding.mqtt.generic.internal.values.AbstractMqttThingValue;
+import org.eclipse.smarthome.binding.mqtt.generic.internal.generic.ChannelConfig;
+import org.eclipse.smarthome.binding.mqtt.generic.internal.generic.ChannelState;
+import org.eclipse.smarthome.binding.mqtt.generic.internal.generic.ChannelStateTransformation;
+import org.eclipse.smarthome.binding.mqtt.generic.internal.generic.ChannelStateUpdateListener;
+import org.eclipse.smarthome.binding.mqtt.generic.internal.generic.MqttChannelTypeProvider;
+import org.eclipse.smarthome.binding.mqtt.generic.internal.generic.TransformationServiceProvider;
+import org.eclipse.smarthome.binding.mqtt.generic.internal.values.Value;
 import org.eclipse.smarthome.binding.mqtt.generic.internal.values.ValueFactory;
 import org.eclipse.smarthome.core.thing.Channel;
 import org.eclipse.smarthome.core.thing.ChannelUID;
@@ -53,7 +58,7 @@ public class GenericThingHandler extends AbstractMQTTThingHandler implements Cha
     }
 
     @Override
-    protected @Nullable ChannelState getChannelState(ChannelUID channelUID) {
+    public @Nullable ChannelState getChannelState(ChannelUID channelUID) {
         return channelStateByChannelUID.get(channelUID);
     }
 
@@ -64,27 +69,35 @@ public class GenericThingHandler extends AbstractMQTTThingHandler implements Cha
      * @param connection A started broker connection
      */
     @Override
-    protected CompletableFuture<Void> start(MqttBrokerConnection connection) {
-        List<CompletableFuture<Boolean>> futures = channelStateByChannelUID.values().stream()
-                .map(c -> c.start(connection, this)).collect(Collectors.toList());
+    protected CompletableFuture<@Nullable Void> start(MqttBrokerConnection connection) {
+        List<CompletableFuture<@Nullable Void>> futures = channelStateByChannelUID.values().stream()
+                .map(c -> c.start(connection, scheduler, 0)).collect(Collectors.toList());
         return CompletableFuture.allOf(futures.toArray(new CompletableFuture[futures.size()])).thenRun(() -> {
             updateStatus(ThingStatus.ONLINE, ThingStatusDetail.NONE);
         });
     }
 
     @Override
+    protected void stop() {
+        channelStateByChannelUID.values().forEach(c -> c.getValue().resetState());
+    }
+
+    @Override
     public void dispose() {
-        if (connection != null) {
-            channelStateByChannelUID.values().forEach(ChannelState::stop);
-            connection = null;
+        try {
+            channelStateByChannelUID.values().stream().map(e -> e.stop())
+                    .reduce(CompletableFuture.completedFuture(null), (a, v) -> a.thenCompose(b -> v))
+                    .get(500, TimeUnit.MILLISECONDS);
+        } catch (InterruptedException | ExecutionException | TimeoutException ignore) {
         }
+        connection = null;
         channelStateByChannelUID.clear();
         super.dispose();
     }
 
     /**
-     * For every Thing channel there exists a corresponding {@link ChannelState}. It consists of the MQTT state and
-     * MQTT command topic, the ChannelUID and a value state.
+     * For every Thing channel there exists a corresponding {@link ChannelState}. It consists of the MQTT state
+     * and MQTT command topic, the ChannelUID and a value state.
      *
      * @param channelConfig The channel configuration that contains MQTT state and command topic and multiple other
      *            configurations.
@@ -92,15 +105,17 @@ public class GenericThingHandler extends AbstractMQTTThingHandler implements Cha
      * @param valueState The channel value state
      * @return
      */
-    protected ChannelState createChannelState(GenericChannelConfig channelConfig, ChannelUID channelUID,
-            AbstractMqttThingValue valueState) {
+    protected ChannelState createChannelState(ChannelConfig channelConfig, ChannelUID channelUID, Value valueState) {
+        ChannelState state = new ChannelState(channelConfig, channelUID, valueState, this);
+
+        // Incoming value transformations
         TransformationServiceProvider transformationServiceProvider = this.transformationServiceProvider;
-        if (transformationServiceProvider != null) {
-            return new ChannelStateWithTransformation(channelConfig.stateTopic, channelConfig.commandTopic,
-                    channelConfig.transformationPattern, channelUID, valueState, transformationServiceProvider);
-        } else {
-            return new ChannelState(channelConfig.stateTopic, channelConfig.commandTopic, channelUID, valueState);
+        if (transformationServiceProvider != null && StringUtils.isNotBlank(channelConfig.transformationPattern)) {
+            state.addTransformation(
+                    new ChannelStateTransformation(channelConfig.transformationPattern, transformationServiceProvider));
         }
+
+        return state;
     }
 
     @Override
@@ -111,7 +126,7 @@ public class GenericThingHandler extends AbstractMQTTThingHandler implements Cha
                 logger.warn("Channel {} has no type", channel.getLabel());
                 continue;
             }
-            final GenericChannelConfig channelConfig = channel.getConfiguration().as(GenericChannelConfig.class);
+            final ChannelConfig channelConfig = channel.getConfiguration().as(ChannelConfig.class);
             ChannelState channelState = createChannelState(channelConfig, channel.getUID(),
                     ValueFactory.createValueState(channelConfig, channelTypeUID.getId()));
             channelStateByChannelUID.put(channel.getUID(), channelState);

@@ -12,7 +12,6 @@
  */
 package org.eclipse.smarthome.core.thing.internal;
 
-import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -182,15 +181,14 @@ public class ThingRegistryImpl extends AbstractRegistry<Thing, ThingUID, ThingPr
     }
 
     private void addThingsToBridge(Bridge bridge) {
-        Collection<Thing> things = getAll();
-        for (Thing thing : things) {
+        forEach(thing -> {
             ThingUID bridgeUID = thing.getBridgeUID();
             if (bridgeUID != null && bridgeUID.equals(bridge.getUID())) {
                 if (bridge instanceof BridgeImpl && !bridge.getThings().contains(thing)) {
                     ((BridgeImpl) bridge).addThing(thing);
                 }
             }
-        }
+        });
     }
 
     private void addThingToBridge(Thing thing) {
@@ -248,8 +246,14 @@ public class ThingRegistryImpl extends AbstractRegistry<Thing, ThingUID, ThingPr
         for (ThingHandlerFactory thingHandlerFactory : thingHandlerFactories) {
             if (thingHandlerFactory.supportsThingType(thingTypeUID)) {
                 Thing thing = thingHandlerFactory.createThing(thingTypeUID, configuration, thingUID, bridgeUID);
-                thing.setLabel(label);
-                return thing;
+                if (thing == null) {
+                    logger.warn(
+                            "Cannot create thing of type '{}'. Binding '{}' says it supports it, but it could not be created.",
+                            thingTypeUID, thingHandlerFactory.getClass().getName());
+                } else {
+                    thing.setLabel(label);
+                    return thing;
+                }
             }
         }
         logger.warn("Cannot create thing. No binding found that supports creating a thing of type '{}'.", thingTypeUID);
@@ -282,7 +286,7 @@ public class ThingRegistryImpl extends AbstractRegistry<Thing, ThingUID, ThingPr
     }
 
     protected void unsetManagedProvider(ManagedThingProvider managedProvider) {
-        super.removeManagedProvider(managedProvider);
+        super.unsetManagedProvider(managedProvider);
     }
 
 }
