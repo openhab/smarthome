@@ -168,26 +168,28 @@ angular.module('PaperUI.services', [ 'PaperUI.services.repositories', 'PaperUI.c
 
         switch (context) {
             case "ITEM":
-                getItemOptions(parameter);
+                getItemOptions(parameter).then(setMissingLabels);
                 break;
             case "THING":
-                getThingOptions(parameter);
+                getThingOptions(parameter).then(setMissingLabels);
                 break;
             case "CHANNEL":
-                getChannelOptions(parameter);
+                getChannelOptions(parameter).then(setMissingLabels);
                 break;
             case "RULE":
                 getRuleOptions(parameter);
                 break;
         }
 
+        return true;
+    }
+
+    function setMissingLabels(parameter) {
         angular.forEach(parameter.options, function(option) {
             if (!option.label || option.label.length == 0) {
                 option.label = option.value;
             }
         });
-
-        return true;
     }
 
     function applyParameterType(parameter) {
@@ -275,30 +277,56 @@ angular.module('PaperUI.services', [ 'PaperUI.services.repositories', 'PaperUI.c
     }
 
     function getItemOptions(parameter) {
-        itemRepository.getAll().then(function(items) {
+        return itemRepository.getAll().then(function(items) {
             var filteredItems = filterByAttributes(items, parameter.filterCriteria);
             if (parameter.options && parameter.options.length > 0) {
                 lookupOptionLabels(parameter.options, filteredItems, 'name', 'label')
             } else {
                 parameter.options = $filter('orderBy')(filteredItems, 'label');
             }
+            angular.forEach(parameter.options, function(option) {
+                if (!option.value && option.name) {
+                    option.value = option.name;
+                }
+            });
+
+            return parameter;
         });
     }
 
     function getThingOptions(parameter) {
-        thingRepository.getAll().then(function(things) {
-            filteredThings = filterByAttributes(things, parameter.filterCriteria);
+        return thingRepository.getAll().then(function(things) {
+            var filteredThings = filterByAttributes(things, parameter.filterCriteria);
             if (parameter.options && parameter.options.length > 0) {
                 lookupOptionLabels(parameter.options, filteredThings, 'UID', 'label')
             } else {
                 parameter.options = filteredThings;
             }
+            angular.forEach(parameter.options, function(option) {
+                if (!option.value && option.UID) {
+                    option.value = option.UID;
+                }
+            });
+
+            return parameter;
         });
     }
 
     function getChannelOptions(parameter) {
-        thingRepository.getAll().then(function(things) {
-            parameter.options = getChannelsFromThings(things, parameter.filterCriteria);
+        return thingRepository.getAll().then(function(things) {
+            var filteredChannels = getChannelsFromThings(things, parameter.filterCriteria);
+            if (parameter.options && parameter.options.length > 0) {
+                lookupOptionLabels(parameter.options, filteredChannels, 'id', 'label')
+            } else {
+                parameter.options = filteredChannels;
+            }
+            angular.forEach(parameter.options, function(option) {
+                if (!option.value && option.id) {
+                    option.value = option.id;
+                }
+            });
+
+            return parameter;
         });
     }
 

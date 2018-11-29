@@ -47,7 +47,6 @@ public class ChannelState implements MqttMessageSubscriber {
     // Immutable channel configuration
     protected final boolean readOnly;
     protected final ChannelUID channelUID;
-    protected final boolean trigger;
     protected final ChannelConfig config;
 
     /** Channel value **/
@@ -77,7 +76,6 @@ public class ChannelState implements MqttMessageSubscriber {
         this.channelUID = channelUID;
         this.value = value;
         this.readOnly = StringUtils.isBlank(config.commandTopic);
-        this.trigger = StringUtils.isBlank(config.stateTopic);
     }
 
     public boolean isReadOnly() {
@@ -137,7 +135,7 @@ public class ChannelState implements MqttMessageSubscriber {
             strvalue = t.processValue(strvalue);
         }
 
-        if (trigger) {
+        if (config.trigger) {
             channelStateUpdateListener.triggerChannel(channelUID, strvalue);
         } else {
             try {
@@ -148,8 +146,8 @@ public class ChannelState implements MqttMessageSubscriber {
                     channelStateUpdateListener.updateChannelState(channelUID, updatedState);
                 }
             } catch (IllegalArgumentException e) {
-                logger.warn("Incoming payload '{}' not supported by type '{}'", strvalue,
-                        value.getClass().getSimpleName(), e);
+                logger.warn("Incoming payload '{}' not supported by type '{}': {}", strvalue,
+                        value.getClass().getSimpleName(), e.getMessage());
             }
         }
 
@@ -174,7 +172,7 @@ public class ChannelState implements MqttMessageSubscriber {
      * Returns the channelType ID which also happens to be an item-type
      */
     public String getItemType() {
-        return value.channelTypeID();
+        return value.getItemType();
     }
 
     /**
