@@ -37,23 +37,35 @@ public class ValueFactory {
                 value = StringUtils.isBlank(config.allowedStates) ? new TextValue()
                         : new TextValue(config.allowedStates.split(","));
                 break;
+            case MqttBindingConstants.DATETIME:
+                value = new DateTimeValue();
+                break;
+            case MqttBindingConstants.IMAGE:
+                value = new ImageValue();
+                break;
+            case MqttBindingConstants.LOCATION:
+                value = new LocationValue();
+                break;
             case MqttBindingConstants.NUMBER:
-                value = new NumberValue(config.isDecimal, config.min, config.max, config.step, false);
+                value = new NumberValue(config.min, config.max, config.step);
                 break;
             case MqttBindingConstants.DIMMER:
-                value = new NumberValue(config.isDecimal, config.min, config.max, config.step, true);
+                value = new PercentageValue(config.min, config.max, config.step);
                 break;
             case MqttBindingConstants.COLOR_RGB:
-                value = new ColorValue(true, config.on, config.off);
+                value = new ColorValue(true, config.on, config.off, config.onBrightness);
                 break;
             case MqttBindingConstants.COLOR_HSB:
-                value = new ColorValue(false, config.on, config.off);
+                value = new ColorValue(false, config.on, config.off, config.onBrightness);
                 break;
             case MqttBindingConstants.SWITCH:
                 value = new OnOffValue(config.on, config.off);
                 break;
             case MqttBindingConstants.CONTACT:
                 value = new OpenCloseValue(config.on, config.off);
+                break;
+            case MqttBindingConstants.ROLLERSHUTTER:
+                value = new RollershutterValue(config.on, config.off, config.stop);
                 break;
             default:
                 throw new IllegalArgumentException("ChannelTypeUID not recognised: " + channelTypeID);

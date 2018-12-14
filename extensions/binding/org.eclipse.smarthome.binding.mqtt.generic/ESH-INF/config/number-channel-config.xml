@@ -4,7 +4,7 @@
 	xmlns:config-description="http://eclipse.org/smarthome/schemas/config-description/v1.0.0"
 	xsi:schemaLocation="http://eclipse.org/smarthome/schemas/config-description/v1.0.0 http://eclipse.org/smarthome/schemas/config-description-1.0.0.xsd">
 
-	<config-description uri="mqtt:number_channel">
+	<config-description uri="thing-type:mqtt:number_channel">
 		<parameter name="stateTopic" type="text">
 			<label>MQTT state topic</label>
 			<description>An MQTT topic that this thing will subscribe to, to receive the state. This can be left empty, the channel will be state-less then and will publish values non-retained.</description>
@@ -30,16 +30,19 @@
 			<default>false</default>
 			<advanced>true</advanced>
 		</parameter>
+
+		<parameter name="min" type="decimal">
+			<label>Absolute minimum</label>
+			<description>This configuration represents the minimum of the allowed range. For a percentage channel that equals zero percent.</description>
+		</parameter>
+		<parameter name="max" type="decimal">
+			<label>Absolute maximum</label>
+			<description>This configuration represents the maximum of the allowed range. For a percentage channel that equals one-hundred percent.</description>
+		</parameter>
 		<parameter name="step" type="decimal">
 			<label>Delta value</label>
-			<description>A number channel can receive Increase/Decrease commands and computes the target number by adding or subtracting this delta value.</description>
-			<default>10.0</default>
-			<advanced>true</advanced>
-		</parameter>
-		<parameter name="isDecimal" type="boolean">
-			<label>Is Decimal?</label>
-			<description>If enabled, the value will be published to the MQTT broker including the fractional part of the number and a dot as the decimal marker.</description>
-			<default>false</default>
+			<description>A number/dimmer channel can receive Increase/Decrease commands and computes the target number by adding or subtracting this delta value.</description>
+			<default>1.0</default>
 			<advanced>true</advanced>
 		</parameter>
 	</config-description>

@@ -19,7 +19,7 @@ import org.eclipse.smarthome.model.script.engine.IActionServiceProvider
 @Singleton
 class ServiceTrackerActionServiceProvider implements IActionServiceProvider {
 
-    private val ScriptServiceUtil scriptServiceUtil
+    val ScriptServiceUtil scriptServiceUtil
     
     new(ScriptServiceUtil scriptServiceUtil) {
         this.scriptServiceUtil = scriptServiceUtil;

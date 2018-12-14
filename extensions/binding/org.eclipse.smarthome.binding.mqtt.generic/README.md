@@ -49,12 +49,16 @@ You can manually add the following channels:
 * **switch**: This channel represents a on/off state of a given topic and can send an on/off value to a given topic.
 * **colorRGB**: This channel handles color values in RGB format.
 * **colorHSB**: This channel handles color values in HSB format.
+* **location**: This channel handles a location.
+* **image**: This channel handles binary images in common java supported formats (bmp,jpg,png).
+* **datetime**: This channel handles date/time values.
+* **rollershutter**: This channel is for rollershutters.
 
-## Thing and Channel configuration
+## Thing and Channel Configuration
 
 All things require a configured broker.
 
-### Common channel configuration parameters
+### Common Channel Configuration Parameters
 
 * __stateTopic__: The MQTT topic that represents the state of the thing. This can be empty, the thing channel will be a state-less trigger then. You can use a wildcard topic like "sensors/+/event" to retrieve state from multiple MQTT topics. 
 * __transformationPattern__: An optional transformation pattern like [JSONPath](http://goessner.net/articles/JsonPath/index.html#e2).
@@ -68,13 +72,13 @@ All things require a configured broker.
 You can connect this channel to a String item.
 
 ### Channel Type "number"
- 
-* __min__: An optional minimum value
-* __max__: An optional maximum value
-* __step__: For decrease, increase commands the step needs to be known
-* __isDecimal__: If set to true the value is send as a decimal value, otherwise it is send as integer.
 
-If any of the parameters is a float/double (has a decimal point value), then a float value is send to the MQTT topic otherwise an int value is send.
+* __min__: An optional minimum value.
+* __max__: An optional maximum value.
+* __step__: For decrease, increase commands the step needs to be known
+
+A decimal value (like 0.2) is send to the MQTT topic if the number has a fractional part.
+If you always require an integer, please use the formatter.
 
 You can connect this channel to a Number item.
 
@@ -86,12 +90,14 @@ You can connect this channel to a Number item.
 
 The value is internally stored as a percentage for a value between **min** and **max**.
 
+The channel will publish a value between 0 and 100.
+
 You can connect this channel to a Rollershutter or Dimmer item.
 
 ### Channel Type "contact", "switch"
 
-* __on__: A number (like 1, 10) or a string (like "ON"/"Open") that is recognised as on/open state.
-* __off__: A number (like 0, -10) or a string (like "OFF"/"Close") that is recognised as off/closed state.
+* __on__: A optional number (like 1, 10) or a string (like "ON"/"Open") that is recognised as on/open state.
+* __off__: A optional number (like 0, -10) or a string (like "OFF"/"Close") that is recognised as off/closed state.
 
 The contact channel by default recognises `"OPEN"` and `"CLOSED"`. You can connect this channel to a Contact item.
 The switch channel by default recognises `"ON"` and `"OFF"`. You can connect this channel to a Switch item.
@@ -102,20 +108,78 @@ You can connect this channel to a Contact or Switch item.
 
 ### Channel Type "colorRGB", "colorHSB"
 
-You can connect this channel to a Color item.
+* __on__: An optional string (like "BRIGHT") that is recognised as on state. (ON will always be recognised.)
+* __off__: An optional string (like "DARK") that is recognised as off state. (OFF will always be recognised.)
+* __onBrightness__: If you connect this channel to a Switch item and turn it on,
+color and saturation are preserved from the last state, but
+the brightness will be set to this configured initial brightness (default: 10%).
+
+You can connect this channel to a Color, Dimmer and Switch item.
 
 This channel will publish the color as comma separated list to the MQTT broker,
 e.g. "112,54,123" for an RGB channel (0-255 per component) and "360,100,100" for a HSB channel (0-359 for hue and 0-100 for saturation and brightness).
 
+The channel expects values on the corresponding MQTT topic to be in this format as well.
+
+### Channel Type "location"
+
+You can connect this channel to a Location item.
+
+The channel will publish the location as comma separated list to the MQTT broker,
+e.g. "112,54,123" for latitude, longitude, altitude. The altitude is optional. 
+
 The channel expects values on the corresponding MQTT topic to be in this format as well. 
+
+### Channel Type "image"
+
+You can connect this channel to an Image item. This is a read-only channel.
+
+The channel expects values on the corresponding MQTT topic to contain the binary
+data of a bmp, jpg, png or any other format that the installed java runtime supports. 
+
+### Channel Type "datetime"
+
+You can connect this channel to a DateTime item.
+
+The channel will publish the date/time in the format "yyyy-MM-dd'T'HH:mm"
+for example 2018-01-01T12:14:00. If you require another format, please use the formatter.
+
+The channel expects values on the corresponding MQTT topic to be in this format as well. 
+
+### Channel Type "rollershutter"
+
+* __on__: An optional string (like "Open") that is recognised as UP state.
+* __off__: An optional string (like "Close") that is recognised as DOWN state.
+* __stop__: An optional string (like "Stop") that is recognised as STOP state.
+
+You can connect this channel to a Rollershutter or Dimmer item.
+
+## Rule Actions
+
+This binding includes a rule action, which allows to publish MQTT messages from within rules.
+There is a separate instance for each MQTT broker (i.e. bridge), which can be retrieved through
+
+```
+val mqttActions = getActions("mqtt","mqtt:systemBroker:embedded-mqtt-broker")
+```
+
+where the first parameter always has to be `mqtt` and the second (`mqtt:systemBroker:embedded-mqtt-broker`) is the Thing UID of the broker that should be used.
+Once this action instance is retrieved, you can invoke the `publishMQTT(String topic, String value)` method on it:
+
+```
+mqttActions.publishMQTT("mytopic","myvalue")
+```
 
 ## Limitations
 
 * This binding does not support Homie Node Instances.
 * Homie Device Statistics (except from "interval") are not supported.
-* The following HomeAssistant MQTT Components are not implemented: Camera, Climate, Fan, Cover. The light component only supports a on/off switch and no color or brightness changes.
+* The HomeAssistant Fan Components only support ON/OFF.
+* The HomeAssistant Cover Components only support OPEN/CLOSE/STOP.
+* The HomeAssistant Light Component does not support XY color changes.
+* The HomeAssistant Climate Components is not yet supported.
 
-## Incoming value transformation
+## Incoming Value Transformation
 
 All mentioned channels can have a configured optional transformation for an incoming MQTT topic value.
 
@@ -172,4 +236,16 @@ demo.items:
 ```xtend
 Switch Kitchen_Light "Kitchen Light" {channel="mqtt:mybroker:topic:mything:lamp" }
 Rollershutter shutter "Blind" {channel="mqtt:mybroker:topic:mything:blind" }
+```
+
+demo.rules:
+
+```xtend
+rule "Send startup message"
+when
+  System started
+then
+  val actions = getActions("mqtt","mqtt:broker:myUnsecureBroker")
+  actions.publishMQTT("system/started","true")    
+end
 ```
