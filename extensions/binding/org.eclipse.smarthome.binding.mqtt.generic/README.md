@@ -189,9 +189,9 @@ Here are a few examples to unwrap a value from a complex response:
 
 | Received value                                                      | Tr. Service | Transformation                            |
 |---------------------------------------------------------------------|-------------|-------------------------------------------|
-| `{device: {status: { temperature: 23.2 }}}`                         | JSONPATH    | "JSONPATH:$.device.status.temperature"    |
-| `<device><status><temperature>23.2</temperature></status></device>` | XPath       | "XPath:/device/status/temperature/text()" |
-| `THEVALUE:23.2°C`                                                    | REGEX       | "REGEX::(.*?)°"                          |
+| `{device: {status: { temperature: 23.2 }}}`                         | JSONPATH    | `"JSONPATH:$.device.status.temperature"`    |
+| `<device><status><temperature>23.2</temperature></status></device>` | XPath       | `"XPath:/device/status/temperature/text()"` |
+| `THEVALUE:23.2°C`                                                    | REGEX       | `"REGEX::(.*?)°"`                          |
 
 ## Format before Publish
 
@@ -220,7 +220,7 @@ demo.Things:
 ```xtend
 Bridge mqtt:broker:myUnsecureBroker [ host="192.168.0.42", secure=false ]
 {
-    Thing mqtt:topic:mything {
+    Thing topic mything {
     Channels:
         Type switch : lamp "Kitchen Lamp" [ stateTopic="lamp/enabled", commandTopic="lamp/enabled/set" ]
         Type switch : fancylamp "Fancy Lamp" [ stateTopic="fancy/lamp/state", commandTopic="fancy/lamp/command", on="i-am-on", off="i-am-off" ]
@@ -234,8 +234,8 @@ Bridge mqtt:broker:myUnsecureBroker [ host="192.168.0.42", secure=false ]
 demo.items:
 
 ```xtend
-Switch Kitchen_Light "Kitchen Light" {channel="mqtt:mybroker:topic:mything:lamp" }
-Rollershutter shutter "Blind" {channel="mqtt:mybroker:topic:mything:blind" }
+Switch Kitchen_Light "Kitchen Light" { channel="mqtt:topic:myUnsecureBroker:mything:lamp" }
+Rollershutter shutter "Blind" { channel="mqtt:topic:myUnsecureBroker:mything:blind" }
 ```
 
 demo.rules:
