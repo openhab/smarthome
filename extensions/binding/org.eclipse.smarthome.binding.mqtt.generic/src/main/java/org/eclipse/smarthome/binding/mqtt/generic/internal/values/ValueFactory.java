@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -50,7 +50,7 @@ public class ValueFactory {
                 value = new NumberValue(config.min, config.max, config.step);
                 break;
             case MqttBindingConstants.DIMMER:
-                value = new PercentageValue(config.min, config.max, config.step);
+                value = new PercentageValue(config.min, config.max, config.step, config.on, config.off);
                 break;
             case MqttBindingConstants.COLOR_RGB:
                 value = new ColorValue(true, config.on, config.off, config.onBrightness);

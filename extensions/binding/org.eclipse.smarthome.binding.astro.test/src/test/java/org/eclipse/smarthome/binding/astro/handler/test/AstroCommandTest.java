@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -14,12 +14,14 @@ package org.eclipse.smarthome.binding.astro.handler.test;
 
 import static org.eclipse.smarthome.binding.astro.AstroBindingConstants.THING_TYPE_SUN;
 import static org.eclipse.smarthome.binding.astro.test.cases.AstroBindingTestsData.*;
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 import org.eclipse.smarthome.binding.astro.handler.AstroThingHandler;
 import org.eclipse.smarthome.binding.astro.handler.SunHandler;
 import org.eclipse.smarthome.binding.astro.internal.model.Sun;
 import org.eclipse.smarthome.config.core.Configuration;
+import org.eclipse.smarthome.core.scheduler.CronScheduler;
 import org.eclipse.smarthome.core.thing.Channel;
 import org.eclipse.smarthome.core.thing.ChannelUID;
 import org.eclipse.smarthome.core.thing.Thing;
@@ -57,7 +59,8 @@ public class AstroCommandTest {
         when(thing.getChannel(DEFAULT_TEST_CHANNEL_ID)).thenReturn(channel);
 
         ThingHandlerCallback callback = mock(ThingHandlerCallback.class);
-        AstroThingHandler sunHandler = spy(new SunHandler(thing));
+        CronScheduler cronScheduler = mock(CronScheduler.class);
+        AstroThingHandler sunHandler = spy(new SunHandler(thing, cronScheduler));
 
         // Required from the AstroThingHandler to send the status update
         doReturn(true).when(callback).isChannelLinked(eq(channelUID));

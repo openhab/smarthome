@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
 
-	Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
+	Copyright (c) 2014,2019 Contributors to the Eclipse Foundation
 
 	See the NOTICE file(s) distributed with this work for additional
 	information regarding copyright ownership.
@@ -170,11 +170,6 @@
     <feature>esh-base</feature>
     <feature>esh-io-transport-upnp</feature>
     <bundle>mvn:org.eclipse.smarthome.binding/org.eclipse.smarthome.binding.wemo/${project.version}</bundle>
-  </feature>
-
-  <feature name="esh-binding-yahooweather" version="${project.version}">
-    <feature>esh-base</feature>
-    <bundle>mvn:org.eclipse.smarthome.binding/org.eclipse.smarthome.binding.yahooweather/${project.version}</bundle>
   </feature>
 
   <feature name="esh-extensionservice-marketplace" version="${project.version}">

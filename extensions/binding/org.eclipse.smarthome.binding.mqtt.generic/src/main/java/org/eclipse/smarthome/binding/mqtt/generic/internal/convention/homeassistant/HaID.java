@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -44,7 +44,7 @@ public class HaID {
         if (strings.length < 3) {
             throw new IllegalArgumentException("MQTT topic not a HomeAssistant topic!");
         }
-        if (strings.length >= 4) {
+        if (strings.length >= 5) {
             component = strings[1];
             nodeID = strings[2];
             objectID = strings[3];

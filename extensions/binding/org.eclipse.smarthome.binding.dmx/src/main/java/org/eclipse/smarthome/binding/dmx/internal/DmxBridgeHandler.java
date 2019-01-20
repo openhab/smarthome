@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -12,16 +12,22 @@
  */
 package org.eclipse.smarthome.binding.dmx.internal;
 
-import static org.eclipse.smarthome.binding.dmx.internal.DmxBindingConstants.*;
+import static org.eclipse.smarthome.binding.dmx.internal.DmxBindingConstants.CHANNEL_MUTE;
 
-import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
+import org.eclipse.smarthome.binding.dmx.action.DmxActions;
+import org.eclipse.smarthome.binding.dmx.internal.action.FadeAction;
+import org.eclipse.smarthome.binding.dmx.internal.action.ResumeAction;
+import org.eclipse.smarthome.binding.dmx.internal.config.DmxBridgeHandlerConfiguration;
 import org.eclipse.smarthome.binding.dmx.internal.multiverse.BaseDmxChannel;
 import org.eclipse.smarthome.binding.dmx.internal.multiverse.DmxChannel;
 import org.eclipse.smarthome.binding.dmx.internal.multiverse.Universe;
-import org.eclipse.smarthome.config.core.Configuration;
 import org.eclipse.smarthome.core.library.types.OnOffType;
 import org.eclipse.smarthome.core.thing.Bridge;
 import org.eclipse.smarthome.core.thing.ChannelUID;
@@ -30,6 +36,7 @@ import org.eclipse.smarthome.core.thing.ThingStatus;
 import org.eclipse.smarthome.core.thing.ThingStatusDetail;
 import org.eclipse.smarthome.core.thing.binding.BaseBridgeHandler;
 import org.eclipse.smarthome.core.thing.binding.ThingHandler;
+import org.eclipse.smarthome.core.thing.binding.ThingHandlerService;
 import org.eclipse.smarthome.core.types.Command;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -187,21 +194,19 @@ public abstract class DmxBridgeHandler extends BaseBridgeHandler {
      * get the configuration and update the bridge
      */
     protected void updateConfiguration() {
-        Configuration configuration = getConfig();
+        DmxBridgeHandlerConfiguration configuration = getConfig().as(DmxBridgeHandlerConfiguration.class);
 
-        if (configuration.get(CONFIG_APPLY_CURVE) != null) {
-            universe.setDimCurveChannels((String) configuration.get(CONFIG_APPLY_CURVE));
+        if (!configuration.applycurve.isEmpty()) {
+            universe.setDimCurveChannels(configuration.applycurve);
         }
-        if (configuration.get(CONFIG_REFRESH_RATE) != null) {
-            float refreshRate = ((BigDecimal) configuration.get(CONFIG_REFRESH_RATE)).floatValue();
-            if (refreshRate > 0) {
-                refreshTime = (int) (1000.0 / refreshRate);
-            } else {
-                refreshTime = 0;
-            }
+
+        int refreshRate = configuration.refreshrate;
+        if (refreshRate > 0) {
+            refreshTime = (int) (1000.0 / refreshRate);
         } else {
-            refreshTime = 1000 / DEFAULT_REFRESH_RATE;
+            refreshTime = 0;
         }
+
         logger.debug("set refreshTime to {} ms in thing {}", refreshTime, this.thing.getUID());
 
         installScheduler();
@@ -219,12 +224,9 @@ public abstract class DmxBridgeHandler extends BaseBridgeHandler {
      * @param minUniverseId the minimum id allowed by the bridge
      * @param maxUniverseId the maximum id allowed by the bridge
      **/
-    protected void setUniverse(Object universeConfig, int minUniverseId, int maxUniverseId) {
+    protected void setUniverse(int universeConfig, int minUniverseId, int maxUniverseId) {
         int universeId = minUniverseId;
-        if (universeConfig != null) {
-            universeId = Util.coerceToRange(((BigDecimal) universeConfig).intValue(), minUniverseId, maxUniverseId,
-                    logger, "universeId");
-        }
+        universeId = Util.coerceToRange(universeConfig, minUniverseId, maxUniverseId, logger, "universeId");
 
         if (universe == null) {
             universe = new Universe(universeId);
@@ -233,4 +235,53 @@ public abstract class DmxBridgeHandler extends BaseBridgeHandler {
         }
     }
 
+    /**
+     * sends an immediate fade to the DMX output (for rule actions)
+     *
+     * @param channelString a String containing the channels
+     * @param fadeString a String containing the fade definition
+     * @param resumeAfter a boolean if the previous state should be restored
+     */
+    public void immediateFade(String channelString, String fadeString, Boolean resumeAfter) {
+        // parse channel config
+        List<DmxChannel> channels = new ArrayList<>();
+        try {
+            List<BaseDmxChannel> configChannels = BaseDmxChannel.fromString(channelString, getUniverseId());
+            logger.trace("found {} channels in {}", configChannels.size(), this.thing.getUID());
+            for (BaseDmxChannel channel : configChannels) {
+                channels.add(getDmxChannel(channel, this.thing));
+            }
+        } catch (IllegalArgumentException e) {
+            logger.warn("invalid channel configuration: {}", channelString);
+            return;
+        }
+
+        // parse fade config
+        ValueSet value = ValueSet.fromString(fadeString);
+        if (value.isEmpty()) {
+            logger.warn("invalid fade configuration: {}", fadeString);
+            return;
+        }
+
+        // do action
+        Integer channelCounter = 0;
+        for (DmxChannel channel : channels) {
+            if (resumeAfter) {
+                channel.suspendAction();
+            } else {
+                channel.clearAction();
+            }
+            channel.addChannelAction(
+                    new FadeAction(value.getFadeTime(), value.getValue(channelCounter), value.getHoldTime()));
+            if (resumeAfter) {
+                channel.addChannelAction(new ResumeAction());
+            }
+            channelCounter++;
+        }
+    }
+
+    @Override
+    public Collection<Class<? extends ThingHandlerService>> getServices() {
+        return Collections.singletonList(DmxActions.class);
+    }
 }

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -208,7 +208,14 @@ public abstract class AbstractOpenWeatherMapHandler extends BaseThingHandler {
         if (callback != null) {
             for (ChannelBuilder channelBuilder : callback.createChannelBuilders(
                     new ChannelGroupUID(getThing().getUID(), channelGroupId), channelGroupTypeUID)) {
-                channels.add(channelBuilder.build());
+                Channel newChannel = channelBuilder.build(),
+                        existingChannel = getThing().getChannel(newChannel.getUID().getId());
+                if (existingChannel != null) {
+                    logger.trace("Thing '{}' already has an existing channel '{}'. Omit adding new channel '{}'.",
+                            getThing().getUID(), existingChannel.getUID(), newChannel.getUID());
+                    continue;
+                }
+                channels.add(newChannel);
             }
         }
         return channels;

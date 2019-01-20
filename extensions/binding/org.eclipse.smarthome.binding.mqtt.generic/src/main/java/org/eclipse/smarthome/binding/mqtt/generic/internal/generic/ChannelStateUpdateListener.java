@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -37,7 +37,7 @@ public interface ChannelStateUpdateListener {
      * @param channelUID The channel uid
      * @param value The new value. Doesn't necessarily need to be different than the value before.
      */
-    void postChannelState(ChannelUID channelUID, Command value);
+    void postChannelCommand(ChannelUID channelUID, Command value);
 
     /**
      * A new value got published on a configured MQTT topic associated with the given channel uid.

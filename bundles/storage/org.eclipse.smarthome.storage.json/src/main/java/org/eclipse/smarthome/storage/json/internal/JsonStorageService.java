@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -106,7 +106,7 @@ public class JsonStorageService implements StorageService {
     protected void deactivate() {
         // Since we're using a delayed commit, we need to write out any data
         for (JsonStorage<Object> storage : storageList.values()) {
-            storage.commitDatabase();
+            storage.flush();
         }
         logger.debug("Json Storage Service: Deactivated.");
     }
@@ -127,7 +127,7 @@ public class JsonStorageService implements StorageService {
 
         JsonStorage<Object> oldStorage = storageList.put(name, (JsonStorage<Object>) newStorage);
         if (oldStorage != null) {
-            oldStorage.commitDatabase();
+            oldStorage.flush();
         }
         return newStorage;
     }

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -590,14 +590,8 @@ public abstract class BaseThingHandler implements ThingHandler {
      * @return true if at least one item is linked, false otherwise
      */
     protected boolean isLinked(String channelId) {
-        Channel channel = thing.getChannel(channelId);
-        if (channel != null) {
-            return isLinked(channel.getUID());
-        } else {
-            logger.debug("Channel with ID '{},' does not exists in thing '{}' and is therefore not linked.", channelId,
-                    thing.getUID());
-            return false;
-        }
+        ChannelUID channelUID = new ChannelUID(this.getThing().getUID(), channelId);
+        return isLinked(channelUID);
     }
 
     /**

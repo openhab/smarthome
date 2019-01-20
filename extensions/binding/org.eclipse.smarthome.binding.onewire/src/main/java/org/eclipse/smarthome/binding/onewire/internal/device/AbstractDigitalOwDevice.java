@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -15,13 +15,14 @@ package org.eclipse.smarthome.binding.onewire.internal.device;
 import static org.eclipse.smarthome.binding.onewire.internal.OwBindingConstants.*;
 
 import java.util.ArrayList;
+import java.util.BitSet;
 import java.util.List;
 
 import org.eclipse.jdt.annotation.NonNullByDefault;
 import org.eclipse.smarthome.binding.onewire.internal.DigitalIoConfig;
 import org.eclipse.smarthome.binding.onewire.internal.OwDynamicStateDescriptionProvider;
 import org.eclipse.smarthome.binding.onewire.internal.OwException;
-import org.eclipse.smarthome.binding.onewire.internal.Util;
+import org.eclipse.smarthome.binding.onewire.internal.SensorId;
 import org.eclipse.smarthome.binding.onewire.internal.handler.OwBaseBridgeHandler;
 import org.eclipse.smarthome.binding.onewire.internal.handler.OwBaseThingHandler;
 import org.eclipse.smarthome.config.core.Configuration;
@@ -44,12 +45,12 @@ import org.slf4j.LoggerFactory;
 public abstract class AbstractDigitalOwDevice extends AbstractOwDevice {
     private final Logger logger = LoggerFactory.getLogger(AbstractDigitalOwDevice.class);
 
-    protected OwDeviceParameterMap fullInParam = new OwDeviceParameterMap();
-    protected OwDeviceParameterMap fullOutParam = new OwDeviceParameterMap();
+    protected final OwDeviceParameterMap fullInParam = new OwDeviceParameterMap();
+    protected final OwDeviceParameterMap fullOutParam = new OwDeviceParameterMap();
 
     protected final List<DigitalIoConfig> ioConfig = new ArrayList<DigitalIoConfig>();
 
-    public AbstractDigitalOwDevice(String sensorId, OwBaseThingHandler callback) {
+    public AbstractDigitalOwDevice(SensorId sensorId, OwBaseThingHandler callback) {
         super(sensorId, callback);
     }
 
@@ -100,10 +101,8 @@ public abstract class AbstractDigitalOwDevice extends AbstractOwDevice {
         if (isConfigured) {
             State state;
 
-            List<Boolean> statesSensed = Util
-                    .decimalTypeToBooleanList((DecimalType) bridgeHandler.readDecimalType(sensorId, fullInParam));
-            List<Boolean> statesPIO = Util
-                    .decimalTypeToBooleanList((DecimalType) bridgeHandler.readDecimalType(sensorId, fullOutParam));
+            BitSet statesSensed = bridgeHandler.readBitSet(sensorId, fullInParam);
+            BitSet statesPIO = bridgeHandler.readBitSet(sensorId, fullOutParam);
 
             for (int i = 0; i < ioConfig.size(); i++) {
                 if (ioConfig.get(i).isInput()) {

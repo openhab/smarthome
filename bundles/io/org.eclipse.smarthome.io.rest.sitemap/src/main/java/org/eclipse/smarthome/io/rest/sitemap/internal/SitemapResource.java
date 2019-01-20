@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -148,7 +148,7 @@ public class SitemapResource implements RESTResource, SitemapSubscriptionCallbac
 
     private final Map<String, EventOutput> eventOutputs = new MapMaker().weakValues().makeMap();
 
-    private ScheduledExecutorService scheduler = ThreadPoolManager
+    private final ScheduledExecutorService scheduler = ThreadPoolManager
             .getScheduledPool(ThreadPoolManager.THREAD_POOL_NAME_COMMON);
 
     private ScheduledFuture<?> cleanSubscriptionsJob;
@@ -540,6 +540,9 @@ public class SitemapResource implements RESTResource, SitemapSubscriptionCallbac
             Slider sliderWidget = (Slider) widget;
             bean.sendFrequency = sliderWidget.getFrequency();
             bean.switchSupport = sliderWidget.isSwitchEnabled();
+            bean.minValue = sliderWidget.getMinValue();
+            bean.maxValue = sliderWidget.getMaxValue();
+            bean.step = sliderWidget.getStep();
         }
         if (widget instanceof List) {
             List listWidget = (List) widget;

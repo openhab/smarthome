@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -20,6 +20,7 @@ import org.eclipse.smarthome.core.persistence.PersistenceService;
 import org.eclipse.smarthome.core.persistence.PersistenceServiceConfiguration;
 import org.eclipse.smarthome.core.persistence.SimpleItemConfiguration;
 import org.eclipse.smarthome.core.persistence.strategy.SimpleStrategy;
+import org.eclipse.smarthome.core.scheduler.SchedulerRunnable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -29,7 +30,7 @@ import org.slf4j.LoggerFactory;
  * @author Kai Kreuzer - Initial contribution and API
  * @author Markus Rathgeb - Separation of persistence core and model, drop Quartz usage.
  */
-public class PersistItemsJob implements Runnable {
+public class PersistItemsJob implements SchedulerRunnable {
 
     private final Logger logger = LoggerFactory.getLogger(PersistItemsJob.class);
 

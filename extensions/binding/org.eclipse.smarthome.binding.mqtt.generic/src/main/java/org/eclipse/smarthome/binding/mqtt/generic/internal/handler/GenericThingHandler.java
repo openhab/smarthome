@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -125,12 +125,19 @@ public class GenericThingHandler extends AbstractMQTTThingHandler implements Cha
      */
     protected ChannelState createChannelState(ChannelConfig channelConfig, ChannelUID channelUID, Value valueState) {
         ChannelState state = new ChannelState(channelConfig, channelUID, valueState, this);
+        String[] transformations;
 
         // Incoming value transformations
-        String[] transformations = channelConfig.transformationPattern.split("\n");
+        transformations = channelConfig.transformationPattern.split("∩");
         Stream.of(transformations).filter(t -> StringUtils.isNotBlank(t))
                 .map(t -> new ChannelStateTransformation(t, transformationServiceProvider))
                 .forEach(t -> state.addTransformation(t));
+
+        // Outgoing value transformations
+        transformations = channelConfig.transformationPatternOut.split("∩");
+        Stream.of(transformations).filter(t -> StringUtils.isNotBlank(t))
+                .map(t -> new ChannelStateTransformation(t, transformationServiceProvider))
+                .forEach(t -> state.addTransformationOut(t));
 
         return state;
     }

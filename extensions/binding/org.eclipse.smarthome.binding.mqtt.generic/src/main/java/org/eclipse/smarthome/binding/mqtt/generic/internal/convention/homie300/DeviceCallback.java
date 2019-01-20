@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -25,25 +25,11 @@ import org.eclipse.smarthome.binding.mqtt.generic.internal.generic.ChannelStateU
 @NonNullByDefault
 public interface DeviceCallback extends ChannelStateUpdateListener {
     /**
-     * Called whenever the heartbeat interval changes.
-     * 
-     * @param intervalInSec Interval in seconds.
-     */
-    void heartbeatIntervalChanged(int intervalInSec);
-
-    /**
      * Called whenever the device state changed
      *
      * @param state The new state
      */
     void readyStateChanged(ReadyState state);
-
-    /**
-     * Called whenever the statistics properties changed
-     *
-     * @param stats The new statistics
-     */
-    void statisticAttributesChanged(DeviceStatsAttributes stats);
 
     /**
      * Called, whenever a Homie node was existing before, but is not anymore.

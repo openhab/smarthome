@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -339,9 +339,8 @@ public class HomematicThingHandler extends BaseThingHandler {
      */
     protected void updateDatapointState(HmDatapoint dp) {
         try {
-            if (HomematicTypeGeneratorImpl.isStatusDatapoint(dp)) {
-                updateStatus(dp.getChannel().getDevice());
-            }
+            updateStatus(dp.getChannel().getDevice());
+
             if (dp.getParamsetType() == HmParamsetType.MASTER) {
                 // update configuration
                 Configuration config = editConfiguration();
@@ -420,7 +419,10 @@ public class HomematicThingHandler extends BaseThingHandler {
         ThingStatus newStatus = ThingStatus.ONLINE;
         ThingStatusDetail newDetail = ThingStatusDetail.NONE;
 
-        if (device.isFirmwareUpdating()) {
+        if (getBridge().getStatus() == ThingStatus.OFFLINE) {
+            newStatus = ThingStatus.OFFLINE;
+            newDetail = ThingStatusDetail.BRIDGE_OFFLINE;
+        } else if (device.isFirmwareUpdating()) {
             newStatus = ThingStatus.OFFLINE;
             newDetail = ThingStatusDetail.FIRMWARE_UPDATING;
         } else if (device.isUnreach()) {

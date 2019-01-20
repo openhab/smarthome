@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -49,7 +49,10 @@ public class MapTransformationService extends AbstractFileTransformationService<
         String target = properties.getProperty(source);
 
         if (target == null) {
-            throw new TransformationException("Target value not found in map for '" + source + "'");
+            target = properties.getProperty("");
+            if (target == null) {
+                throw new TransformationException("Target value not found in map for '" + source + "'");
+            }
         }
 
         logger.debug("Transformation resulted in '{}'", target);

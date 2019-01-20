@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -1247,6 +1247,20 @@ public class ThingManagerImpl
             } else {
                 // Only set the correct status to the thing. There is no handler to be disposed
                 setThingStatus(thing, buildStatusInfo(ThingStatus.UNINITIALIZED, ThingStatusDetail.DISABLED));
+            }
+
+            if (isBridge(thing)) {
+                updateChildThingStatusForDisabledBridges((Bridge) thing);
+            }
+        }
+    }
+
+    private void updateChildThingStatusForDisabledBridges(Bridge bridge) {
+        for (Thing childThing : bridge.getThings()) {
+            ThingStatusDetail statusDetail = childThing.getStatusInfo().getStatusDetail();
+            if (childThing.getStatus() == ThingStatus.UNINITIALIZED && statusDetail != ThingStatusDetail.DISABLED) {
+                setThingStatus(childThing,
+                        buildStatusInfo(ThingStatus.UNINITIALIZED, ThingStatusDetail.BRIDGE_UNINITIALIZED));
             }
         }
     }

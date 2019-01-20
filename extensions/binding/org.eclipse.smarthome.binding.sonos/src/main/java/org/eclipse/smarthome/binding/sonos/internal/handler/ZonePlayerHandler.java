@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -90,6 +90,8 @@ public class ZonePlayerHandler extends BaseThingHandler implements UpnpIOPartici
     private static final String GROUP_URI = "x-rincon:";
     private static final String STREAM_URI = "x-sonosapi-stream:";
     private static final String RADIO_URI = "x-sonosapi-radio:";
+    private static final String RADIO_MP3_URI = "x-rincon-mp3radio:";
+    private static final String OPML_TUNE = "http://opml.radiotime.com/Tune.ashx";
     private static final String FILE_URI = "x-file-cifs:";
     private static final String SPDIF = ":spdif";
     private static final String TUNEIN_URI = "x-sonosapi-stream:s%s?sid=%s&flags=32";
@@ -334,6 +336,12 @@ public class ZonePlayerHandler extends BaseThingHandler implements UpnpIOPartici
                 case REPEAT:
                     setRepeat(command);
                     break;
+                case NIGHTMODE:
+                    setNightMode(command);
+                    break;
+                case SPEECHENHANCEMENT:
+                    setSpeechEnhancement(command);
+                    break;
                 default:
                     break;
             }
@@ -457,6 +465,12 @@ public class ZonePlayerHandler extends BaseThingHandler implements UpnpIOPartici
                     break;
                 case "MuteMaster":
                     updateChannel(MUTE);
+                    break;
+                case "NightMode":
+                    updateChannel(NIGHTMODE);
+                    break;
+                case "DialogLevel":
+                    updateChannel(SPEECHENHANCEMENT);
                     break;
                 case "LineInConnected":
                 case "TOSLinkConnected":
@@ -655,6 +669,16 @@ public class ZonePlayerHandler extends BaseThingHandler implements UpnpIOPartici
             case MUTE:
                 if (stateMap.get("MuteMaster") != null) {
                     newState = stateMap.get("MuteMaster").equals("1") ? OnOffType.ON : OnOffType.OFF;
+                }
+                break;
+            case NIGHTMODE:
+                if (stateMap.get("NightMode") != null) {
+                    newState = stateMap.get("NightMode").equals("1") ? OnOffType.ON : OnOffType.OFF;
+                }
+                break;
+            case SPEECHENHANCEMENT:
+                if (stateMap.get("DialogLevel") != null) {
+                    newState = stateMap.get("DialogLevel").equals("1") ? OnOffType.ON : OnOffType.OFF;
                 }
                 break;
             case LINEIN:
@@ -995,10 +1019,10 @@ public class ZonePlayerHandler extends BaseThingHandler implements UpnpIOPartici
             // The media information will be updated by the coordinator
             // Notification of group change occurs later, so we just check the URI
 
-            else if (isPlayingStream(currentURI)) {
+            else if (isPlayingStream(currentURI) || isPlayingRadioStartedByAmazonEcho(currentURI)) {
                 // Radio stream (tune-in)
                 boolean opmlUrlSucceeded = false;
-                stationID = StringUtils.substringBetween(currentURI, ":s", "?sid");
+                stationID = extractStationId(currentURI);
                 if (opmlUrl != null) {
                     String mac = getMACAddress();
                     if (stationID != null && !stationID.isEmpty() && mac != null && !mac.isEmpty()) {
@@ -1103,6 +1127,16 @@ public class ZonePlayerHandler extends BaseThingHandler implements UpnpIOPartici
         if (needsUpdating && handlerForImageUpdate != null) {
             handlerForImageUpdate.updateAlbumArtChannel(true);
         }
+    }
+
+    private String extractStationId(String uri) {
+        String stationID = null;
+        if (isPlayingStream(uri)) {
+            stationID = StringUtils.substringBetween(uri, ":s", "?sid");
+        } else if (isPlayingRadioStartedByAmazonEcho(uri)) {
+            stationID = StringUtils.substringBetween(uri, "sid=s", "&");
+        }
+        return stationID;
     }
 
     public boolean isGroupCoordinator() {
@@ -1334,7 +1368,8 @@ public class ZonePlayerHandler extends BaseThingHandler implements UpnpIOPartici
             savedState.volume = getVolume();
 
             if (currentURI != null) {
-                if (isPlayingStream(currentURI) || isPlayingRadio(currentURI)) {
+                if (isPlayingStream(currentURI) || isPlayingRadioStartedByAmazonEcho(currentURI)
+                        || isPlayingRadio(currentURI)) {
                     // we are streaming music, like tune-in radio or Google Play Music radio
                     SonosMetaData track = getTrackMetadata();
                     SonosMetaData current = getCurrentURIMetadata();
@@ -1758,6 +1793,38 @@ public class ZonePlayerHandler extends BaseThingHandler implements UpnpIOPartici
             } catch (IllegalStateException e) {
                 logger.debug("Cannot handle repeat command ({})", e.getMessage());
             }
+        }
+    }
+
+    public void setNightMode(Command command) {
+        if ((command != null) && (command instanceof OnOffType || command instanceof OpenClosedType
+                || command instanceof UpDownType)) {
+            setEQ("NightMode", (command.equals(OnOffType.ON) || command.equals(UpDownType.UP)
+                    || command.equals(OpenClosedType.OPEN)) ? "1" : "0");
+        }
+    }
+
+    public void setSpeechEnhancement(Command command) {
+        if ((command != null) && (command instanceof OnOffType || command instanceof OpenClosedType
+                || command instanceof UpDownType)) {
+            setEQ("DialogLevel", (command.equals(OnOffType.ON) || command.equals(UpDownType.UP)
+                    || command.equals(OpenClosedType.OPEN)) ? "1" : "0");
+        }
+    }
+
+    private void setEQ(String eqType, String value) {
+        try {
+            Map<String, String> inputs = new HashMap<String, String>();
+            inputs.put("InstanceID", "0");
+            inputs.put("EQType", eqType);
+            inputs.put("DesiredValue", value);
+            Map<String, String> result = service.invokeAction(this, "RenderingControl", "SetEQ", inputs);
+
+            for (String variable : result.keySet()) {
+                this.onValueReceived(variable, result.get(variable), "RenderingControl");
+            }
+        } catch (IllegalStateException e) {
+            logger.debug("Cannot handle {} command ({})", eqType, e.getMessage());
         }
     }
 
@@ -2238,7 +2305,8 @@ public class ZonePlayerHandler extends BaseThingHandler implements UpnpIOPartici
 
                 String currentURI = coordinator.getCurrentURI();
 
-                if (isPlayingStream(currentURI) || isPlayingRadio(currentURI)) {
+                if (isPlayingStream(currentURI) || isPlayingRadioStartedByAmazonEcho(currentURI)
+                        || isPlayingRadio(currentURI)) {
                     handleRadioStream(currentURI, notificationURL, coordinator);
                 } else if (isPlayingLineIn(currentURI)) {
                     handleLineIn(currentURI, notificationURL, coordinator);
@@ -2279,6 +2347,13 @@ public class ZonePlayerHandler extends BaseThingHandler implements UpnpIOPartici
             return false;
         }
         return currentURI.contains(RADIO_URI);
+    }
+
+    private boolean isPlayingRadioStartedByAmazonEcho(String currentURI) {
+        if (currentURI == null) {
+            return false;
+        }
+        return currentURI.contains(RADIO_MP3_URI) && currentURI.contains(OPML_TUNE);
     }
 
     private boolean isPlayingLineIn(String currentURI) {
@@ -2322,9 +2397,11 @@ public class ZonePlayerHandler extends BaseThingHandler implements UpnpIOPartici
      * @param coordinator - {@link ZonePlayerHandler} coordinator for the SONOS device(s)
      */
     private void handleLineIn(String currentLineInURI, Command notificationURL, ZonePlayerHandler coordinator) {
+        logger.debug("Handling notification while sound from line-in was being played");
         String nextAction = coordinator.getTransportState();
 
         handleNotificationSound(notificationURL, coordinator);
+        logger.debug("Restoring sound from line-in using {}", currentLineInURI);
         coordinator.setCurrentURI(currentLineInURI, "");
 
         restoreLastTransportState(coordinator, nextAction);

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -170,7 +170,6 @@ public class OpenWeatherMapWeatherAndForecastHandler extends AbstractOpenWeather
                     dailyForecastData = connection.getDailyForecastData(location, forecastDays);
                 } catch (OpenWeatherMapConfigurationException e) {
                     if (e.getCause() instanceof HttpResponseException) {
-                        logger.warn(e.getLocalizedMessage());
                         forecastDays = 0;
                         Configuration editConfig = editConfiguration();
                         editConfig.put(CONFIG_FORECAST_DAYS, 0);
@@ -259,6 +258,9 @@ public class OpenWeatherMapWeatherAndForecastHandler extends AbstractOpenWeather
                     state = getRawTypeState(
                             OpenWeatherMapConnection.getWeatherIcon(weatherData.getWeather().get(0).getIcon()));
                     break;
+                case CHANNEL_CONDITION_ICON_ID:
+                    state = getStringTypeState(weatherData.getWeather().get(0).getIcon());
+                    break;
                 case CHANNEL_TEMPERATURE:
                     state = getQuantityTypeState(weatherData.getMain().getTemp(), CELSIUS);
                     break;
@@ -327,6 +329,9 @@ public class OpenWeatherMapWeatherAndForecastHandler extends AbstractOpenWeather
                     state = getRawTypeState(
                             OpenWeatherMapConnection.getWeatherIcon(forecastData.getWeather().get(0).getIcon()));
                     break;
+                case CHANNEL_CONDITION_ICON_ID:
+                    state = getStringTypeState(forecastData.getWeather().get(0).getIcon());
+                    break;
                 case CHANNEL_TEMPERATURE:
                     state = getQuantityTypeState(forecastData.getMain().getTemp(), CELSIUS);
                     break;
@@ -394,6 +399,9 @@ public class OpenWeatherMapWeatherAndForecastHandler extends AbstractOpenWeather
                 case CHANNEL_CONDITION_ICON:
                     state = getRawTypeState(
                             OpenWeatherMapConnection.getWeatherIcon(forecastData.getWeather().get(0).getIcon()));
+                    break;
+                case CHANNEL_CONDITION_ICON_ID:
+                    state = getStringTypeState(forecastData.getWeather().get(0).getIcon());
                     break;
                 case CHANNEL_MIN_TEMPERATURE:
                     state = getQuantityTypeState(forecastData.getTemp().getMin(), CELSIUS);

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -28,17 +28,25 @@ public enum OwSensorType {
     DS2405,
     DS2406,
     DS2408,
+    DS2409,
     DS2413,
     DS2423,
     DS2431,
     DS2438,
-    DS2450,
+    MS_TC,
     MS_TH,
+    MS_TL,
     MS_TH_S,
     MS_TV,
     AMS,
     AMS_S,
     BMS,
     BMS_S,
+    EDS,
+    EDS0064,
+    EDS0065,
+    EDS0066,
+    EDS0067,
+    EDS0068,
     UNKNOWN;
 }

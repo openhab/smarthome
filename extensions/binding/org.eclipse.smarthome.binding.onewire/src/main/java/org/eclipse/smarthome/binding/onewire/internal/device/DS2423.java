@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -18,6 +18,7 @@ import java.util.List;
 
 import org.eclipse.jdt.annotation.NonNullByDefault;
 import org.eclipse.smarthome.binding.onewire.internal.OwException;
+import org.eclipse.smarthome.binding.onewire.internal.SensorId;
 import org.eclipse.smarthome.binding.onewire.internal.handler.OwBaseBridgeHandler;
 import org.eclipse.smarthome.binding.onewire.internal.handler.OwBaseThingHandler;
 import org.eclipse.smarthome.binding.onewire.internal.owserver.OwserverDeviceParameter;
@@ -33,13 +34,13 @@ import org.slf4j.LoggerFactory;
 @NonNullByDefault
 public class DS2423 extends AbstractOwDevice {
     private final Logger logger = LoggerFactory.getLogger(DS2423.class);
-    private static final OwDeviceParameterMap COUNTER_PARAMETER = new OwDeviceParameterMap() {
+    private final OwDeviceParameterMap counterParameter = new OwDeviceParameterMap() {
         {
             set(THING_TYPE_OWSERVER, new OwserverDeviceParameter("/counters.ALL"));
         }
     };
 
-    public DS2423(String sensorId, OwBaseThingHandler callback) {
+    public DS2423(SensorId sensorId, OwBaseThingHandler callback) {
         super(sensorId, callback);
     }
 
@@ -51,7 +52,7 @@ public class DS2423 extends AbstractOwDevice {
     @Override
     public void refresh(OwBaseBridgeHandler bridgeHandler, Boolean forcedRefresh) throws OwException {
         if (isConfigured) {
-            List<State> states = bridgeHandler.readDecimalTypeArray(sensorId, COUNTER_PARAMETER);
+            List<State> states = bridgeHandler.readDecimalTypeArray(sensorId, counterParameter);
             logger.trace("read array {} from {}", states, sensorId);
 
             if (states.size() != 2) {

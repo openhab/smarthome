@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -65,7 +65,7 @@ import org.slf4j.LoggerFactory;
  * {@link HueBridgeHandler} is the handler for a hue bridge and connects it to
  * the framework. All {@link HueLightHandler}s use the {@link HueBridgeHandler} to execute the actual commands.
  *
- * @author Dennis Nobel - Initial contribution of hue binding
+ * @author Dennis Nobel - Initial contribution
  * @author Oliver Libutzki
  * @author Kai Kreuzer - improved state handling
  * @author Andre Fuechsel - implemented getFullLights(), startSearch()
@@ -79,8 +79,8 @@ import org.slf4j.LoggerFactory;
 @NonNullByDefault
 public class HueBridgeHandler extends ConfigStatusBridgeHandler implements HueClient {
 
-    private static final int DEFAULT_POLLING_INTERVAL = 10; // in seconds
-    private static final int DEFAULT_SENSOR_POLLING_INTERVAL = 500; // in milliseconds
+    private long lightPollingInterval = TimeUnit.SECONDS.toSeconds(10);
+    private long sensorPollingInterval = TimeUnit.MILLISECONDS.toMillis(500);
 
     final ReentrantLock pollingLock = new ReentrantLock();
 
@@ -171,7 +171,7 @@ public class HueBridgeHandler extends ConfigStatusBridgeHandler implements HueCl
     private final List<LightStatusListener> lightStatusListeners = new CopyOnWriteArrayList<>();
     private final List<SensorStatusListener> sensorStatusListeners = new CopyOnWriteArrayList<>();
 
-    private @Nullable ScheduledFuture<?> pollingJob;
+    private @Nullable ScheduledFuture<?> lightPollingJob;
     private @Nullable ScheduledFuture<?> sensorPollingJob;
 
     private @NonNullByDefault({}) HueBridge hueBridge = null;
@@ -215,7 +215,7 @@ public class HueBridgeHandler extends ConfigStatusBridgeHandler implements HueCl
         }
     };
 
-    private final Runnable pollingRunnable = new PollingRunnable() {
+    private final Runnable lightPollingRunnable = new PollingRunnable() {
         @Override
         protected void doConnectedRun() throws IOException, ApiException {
             Map<String, FullLight> lastLightStateCopy = new HashMap<>(lastLightStates);
@@ -335,17 +335,51 @@ public class HueBridgeHandler extends ConfigStatusBridgeHandler implements HueCl
         }
     }
 
-    @Override
-    public void dispose() {
-        logger.debug("Handler disposed.");
-        if (pollingJob != null && !pollingJob.isCancelled()) {
-            pollingJob.cancel(true);
-            pollingJob = null;
+    private void startLightPolling() {
+        if (lightPollingJob == null || lightPollingJob.isCancelled()) {
+            if (hueBridgeConfig.getPollingInterval() < 1) {
+                logger.info("Wrong configuration value for polling interval. Using default value: {}s",
+                        lightPollingInterval);
+            } else {
+                lightPollingInterval = hueBridgeConfig.getPollingInterval();
+            }
+            lightPollingJob = scheduler.scheduleWithFixedDelay(lightPollingRunnable, 1, lightPollingInterval,
+                    TimeUnit.SECONDS);
         }
+    }
+
+    private void stopLightPolling() {
+        if (lightPollingJob != null && !lightPollingJob.isCancelled()) {
+            lightPollingJob.cancel(true);
+            lightPollingJob = null;
+        }
+    }
+
+    private void startSensorPolling() {
+        if (sensorPollingJob == null || sensorPollingJob.isCancelled()) {
+            if (hueBridgeConfig.getSensorPollingInterval() < 50) {
+                logger.info("Wrong configuration value for sensor polling interval. Using default value: {}ms",
+                        sensorPollingInterval);
+            } else {
+                sensorPollingInterval = hueBridgeConfig.getSensorPollingInterval();
+            }
+            sensorPollingJob = scheduler.scheduleWithFixedDelay(sensorPollingRunnable, 1, sensorPollingInterval,
+                    TimeUnit.MILLISECONDS);
+        }
+    }
+
+    private void stopSensorPolling() {
         if (sensorPollingJob != null && !sensorPollingJob.isCancelled()) {
             sensorPollingJob.cancel(true);
             sensorPollingJob = null;
         }
+    }
+
+    @Override
+    public void dispose() {
+        logger.debug("Handler disposed.");
+        stopLightPolling();
+        stopSensorPolling();
         if (hueBridge != null) {
             hueBridge = null;
         }
@@ -370,26 +404,17 @@ public class HueBridgeHandler extends ConfigStatusBridgeHandler implements HueCl
 
     private synchronized void onUpdate() {
         if (hueBridge != null) {
-            if (pollingJob == null || pollingJob.isCancelled()) {
-                int pollingInterval = DEFAULT_POLLING_INTERVAL;
-                if (hueBridgeConfig.getPollingInterval() < 1) {
-                    logger.info("Wrong configuration value for polling interval. Using default value: {}s",
-                            pollingInterval);
-                } else {
-                    pollingInterval = hueBridgeConfig.getPollingInterval();
-                }
-                pollingJob = scheduler.scheduleWithFixedDelay(pollingRunnable, 1, pollingInterval, TimeUnit.SECONDS);
+            // start light polling only if a light handler has been registered, otherwise stop polling
+            if (lightStatusListeners.isEmpty()) {
+                stopLightPolling();
+            } else {
+                startLightPolling();
             }
-            if (sensorPollingJob == null || sensorPollingJob.isCancelled()) {
-                int sensorPollingInterval = DEFAULT_SENSOR_POLLING_INTERVAL;
-                if (hueBridgeConfig.getSensorPollingInterval() < 50) {
-                    logger.info("Wrong configuration value for sensor polling interval. Using default value: {}s",
-                            sensorPollingInterval);
-                } else {
-                    sensorPollingInterval = hueBridgeConfig.getSensorPollingInterval();
-                }
-                sensorPollingJob = scheduler.scheduleWithFixedDelay(sensorPollingRunnable, 1, sensorPollingInterval,
-                        TimeUnit.MILLISECONDS);
+            // start sensor polling only if a sensor handler has been registered, otherwise stop polling
+            if (sensorStatusListeners.isEmpty()) {
+                stopSensorPolling();
+            } else {
+                startSensorPolling();
             }
         }
     }
@@ -530,8 +555,9 @@ public class HueBridgeHandler extends ConfigStatusBridgeHandler implements HueCl
     @Override
     public boolean registerLightStatusListener(LightStatusListener lightStatusListener) {
         boolean result = lightStatusListeners.add(lightStatusListener);
-        if (result) {
-            onUpdate();
+        if (result && hueBridge != null) {
+            // start light polling only if a light handler has been registered
+            startLightPolling();
             // inform the listener initially about all lights and their states
             for (FullLight light : lastLightStates.values()) {
                 lightStatusListener.onLightAdded(hueBridge, light);
@@ -544,7 +570,10 @@ public class HueBridgeHandler extends ConfigStatusBridgeHandler implements HueCl
     public boolean unregisterLightStatusListener(LightStatusListener lightStatusListener) {
         boolean result = lightStatusListeners.remove(lightStatusListener);
         if (result) {
-            onUpdate();
+            // stop stop light polling
+            if (lightStatusListeners.isEmpty()) {
+                stopLightPolling();
+            }
         }
         return result;
     }
@@ -552,8 +581,9 @@ public class HueBridgeHandler extends ConfigStatusBridgeHandler implements HueCl
     @Override
     public boolean registerSensorStatusListener(SensorStatusListener sensorStatusListener) {
         boolean result = sensorStatusListeners.add(sensorStatusListener);
-        if (result) {
-            onUpdate();
+        if (result && hueBridge != null) {
+            // start sensor polling only if a sensor handler has been registered
+            startSensorPolling();
             // inform the listener initially about all sensors and their states
             for (FullSensor sensor : lastSensorStates.values()) {
                 sensorStatusListener.onSensorAdded(hueBridge, sensor);
@@ -566,7 +596,10 @@ public class HueBridgeHandler extends ConfigStatusBridgeHandler implements HueCl
     public boolean unregisterSensorStatusListener(SensorStatusListener sensorStatusListener) {
         boolean result = sensorStatusListeners.remove(sensorStatusListener);
         if (result) {
-            onUpdate();
+            // stop sensor polling
+            if (sensorStatusListeners.isEmpty()) {
+                stopSensorPolling();
+            }
         }
         return result;
     }
@@ -717,5 +750,9 @@ public class HueBridgeHandler extends ConfigStatusBridgeHandler implements HueCl
         }
 
         return configStatusMessages;
+    }
+
+    public long getSensorPollingInterval() {
+        return sensorPollingInterval;
     }
 }

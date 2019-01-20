@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -160,10 +160,10 @@ public class ComponentLight extends AbstractComponent implements ChannelStateUpd
      * Proxy method to condense all three MQTT subscriptions to one channel
      */
     @Override
-    public void postChannelState(ChannelUID channelUID, Command value) {
+    public void postChannelCommand(ChannelUID channelUID, Command value) {
         ChannelStateUpdateListener listener = channelStateUpdateListener;
         if (listener != null) {
-            listener.postChannelState(colorChannel.channelUID, value);
+            listener.postChannelCommand(colorChannel.channelUID, value);
         }
     }
 

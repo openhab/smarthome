@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -44,11 +44,8 @@ import org.slf4j.LoggerFactory;
 public class Homie300Discovery extends AbstractMQTTDiscovery {
     private final Logger logger = LoggerFactory.getLogger(Homie300Discovery.class);
 
-    static final String BASE_TOPIC = "homie";
-
     public Homie300Discovery() {
-        super(Stream.of(MqttBindingConstants.HOMIE300_MQTT_THING).collect(Collectors.toSet()), 3, true,
-                BASE_TOPIC + "/+/$homie");
+        super(Stream.of(MqttBindingConstants.HOMIE300_MQTT_THING).collect(Collectors.toSet()), 3, true, "+/+/$homie");
     }
 
     @NonNullByDefault({})
@@ -102,7 +99,7 @@ public class Homie300Discovery extends AbstractMQTTDiscovery {
             return;
         }
 
-        publishDevice(connectionBridge, connection, deviceID, deviceID);
+        publishDevice(connectionBridge, connection, deviceID, topic);
 
         // Retrieve name and update found discovery
         try {
@@ -116,15 +113,15 @@ public class Homie300Discovery extends AbstractMQTTDiscovery {
 
     }
 
-    void publishDevice(ThingUID connectionBridge, MqttBrokerConnection connection, String deviceID, String name) {
+    void publishDevice(ThingUID connectionBridge, MqttBrokerConnection connection, String deviceID, String topic) {
         Map<String, Object> properties = new HashMap<>();
         properties.put("deviceid", deviceID);
-        properties.put("basetopic", BASE_TOPIC);
+        properties.put("basetopic", topic.substring(0, topic.indexOf("/")));
 
         thingDiscovered(DiscoveryResultBuilder
                 .create(new ThingUID(MqttBindingConstants.HOMIE300_MQTT_THING, connectionBridge, deviceID))
                 .withBridge(connectionBridge).withProperties(properties).withRepresentationProperty("deviceid")
-                .withLabel(name).build());
+                .withLabel(deviceID).build());
     }
 
     @Override

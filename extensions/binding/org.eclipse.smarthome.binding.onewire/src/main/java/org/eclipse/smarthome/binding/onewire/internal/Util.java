@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -12,25 +12,14 @@
  */
 package org.eclipse.smarthome.binding.onewire.internal;
 
-import static org.eclipse.smarthome.binding.onewire.internal.OwBindingConstants.CHANNEL_TEMPERATURE;
-
-import java.util.ArrayList;
-import java.util.List;
-
 import javax.measure.quantity.Dimensionless;
 import javax.measure.quantity.Temperature;
 
 import org.eclipse.jdt.annotation.NonNullByDefault;
 import org.eclipse.smarthome.core.library.dimension.Density;
-import org.eclipse.smarthome.core.library.types.DecimalType;
 import org.eclipse.smarthome.core.library.types.QuantityType;
 import org.eclipse.smarthome.core.library.unit.SIUnits;
 import org.eclipse.smarthome.core.library.unit.SmartHomeUnits;
-import org.eclipse.smarthome.core.thing.Channel;
-import org.eclipse.smarthome.core.thing.ChannelUID;
-import org.eclipse.smarthome.core.thing.ThingUID;
-import org.eclipse.smarthome.core.thing.binding.builder.ChannelBuilder;
-import org.eclipse.smarthome.core.thing.type.ChannelTypeUID;
 import org.eclipse.smarthome.core.types.State;
 
 /**
@@ -40,22 +29,6 @@ import org.eclipse.smarthome.core.types.State;
  */
 @NonNullByDefault
 public class Util {
-
-    /**
-     * convert a number to a list of booleans
-     *
-     * @param decimal
-     * @return
-     */
-    public static List<Boolean> decimalTypeToBooleanList(DecimalType decimal) {
-        List<Boolean> returnValues = new ArrayList<Boolean>();
-        int value = decimal.intValue();
-        for (int i = 0; i < 8; i++) {
-            returnValues.add((value & (1 << i)) > 0);
-        }
-        return returnValues;
-    }
-
     /**
      * calculate absolute humidity in g/m³ from measured values
      *
@@ -94,17 +67,5 @@ public class Util {
                 / (((17.62 * 243.12) / (243.12 + theta) - Math.log(rH))));
         State dewPoint = new QuantityType<Temperature>(dP, SIUnits.CELSIUS);
         return dewPoint;
-    }
-
-    /**
-     * build a temperature channel for things
-     *
-     * @param thingUID the UID of the thing
-     * @param channelTypeUID the channelTypeUID of the channel
-     * @return the channel itself
-     */
-    public static Channel buildTemperatureChannel(ThingUID thingUID, ChannelTypeUID channelTypeUID) {
-        return ChannelBuilder.create(new ChannelUID(thingUID, CHANNEL_TEMPERATURE), "Number:Temperature")
-                .withLabel("Temperature").withType(channelTypeUID).build();
     }
 }

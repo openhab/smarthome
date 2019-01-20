@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -20,6 +20,8 @@ import org.eclipse.jdt.annotation.NonNullByDefault;
  * Provides a certificate for the given host name
  *
  * Implement this interface to request the framework to use a specific certificate for the given host
+ *
+ * NOTE: implementations of this interface should be immutable, to guarantee efficient and correct functionality
  *
  * @author Martin van Wingerden - Initial Contribution
  */

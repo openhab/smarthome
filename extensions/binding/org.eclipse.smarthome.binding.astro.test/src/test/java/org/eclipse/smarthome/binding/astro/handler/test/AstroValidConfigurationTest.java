@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -19,6 +19,7 @@ import static org.mockito.Mockito.*;
 import org.eclipse.smarthome.binding.astro.handler.AstroThingHandler;
 import org.eclipse.smarthome.binding.astro.handler.SunHandler;
 import org.eclipse.smarthome.config.core.Configuration;
+import org.eclipse.smarthome.core.scheduler.CronScheduler;
 import org.eclipse.smarthome.core.thing.Thing;
 import org.eclipse.smarthome.core.thing.ThingStatus;
 import org.eclipse.smarthome.core.thing.ThingStatusDetail;
@@ -140,7 +141,8 @@ public class AstroValidConfigurationTest {
         when(thing.getUID()).thenReturn(thingUID);
 
         ThingHandlerCallback callback = mock(ThingHandlerCallback.class);
-        ThingHandler sunHandler = new SunHandler(thing);
+        CronScheduler cronScheduler = mock(CronScheduler.class);
+        ThingHandler sunHandler = new SunHandler(thing, cronScheduler);
         sunHandler.setCallback(callback);
 
         sunHandler.initialize();

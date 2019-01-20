@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -24,6 +24,7 @@ import org.eclipse.smarthome.binding.astro.internal.job.DailyJobMoon;
 import org.eclipse.smarthome.binding.astro.internal.job.Job;
 import org.eclipse.smarthome.binding.astro.internal.model.Moon;
 import org.eclipse.smarthome.binding.astro.internal.model.Planet;
+import org.eclipse.smarthome.core.scheduler.CronScheduler;
 import org.eclipse.smarthome.core.thing.Thing;
 import org.eclipse.smarthome.core.thing.ThingTypeUID;
 
@@ -42,9 +43,11 @@ public class MoonHandler extends AstroThingHandler {
     private final MoonCalc moonCalc = new MoonCalc();
     private Moon moon;
 
-    /** Constructor */
-    public MoonHandler(Thing thing) {
-        super(thing);
+    /**
+     * Constructor
+     */
+    public MoonHandler(Thing thing, CronScheduler scheduler) {
+        super(thing, scheduler);
     }
 
     @Override

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -16,25 +16,36 @@ import static org.eclipse.smarthome.binding.onewire.internal.OwBindingConstants.
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import org.eclipse.jdt.annotation.NonNullByDefault;
 import org.eclipse.jdt.annotation.Nullable;
 import org.eclipse.smarthome.binding.onewire.internal.OwDynamicStateDescriptionProvider;
 import org.eclipse.smarthome.binding.onewire.internal.OwException;
+import org.eclipse.smarthome.binding.onewire.internal.SensorId;
 import org.eclipse.smarthome.binding.onewire.internal.device.AbstractOwDevice;
 import org.eclipse.smarthome.binding.onewire.internal.device.OwSensorType;
 import org.eclipse.smarthome.config.core.Configuration;
 import org.eclipse.smarthome.core.library.types.OnOffType;
 import org.eclipse.smarthome.core.thing.Bridge;
+import org.eclipse.smarthome.core.thing.Channel;
 import org.eclipse.smarthome.core.thing.ChannelUID;
 import org.eclipse.smarthome.core.thing.Thing;
 import org.eclipse.smarthome.core.thing.ThingStatus;
 import org.eclipse.smarthome.core.thing.ThingStatusDetail;
 import org.eclipse.smarthome.core.thing.ThingStatusInfo;
 import org.eclipse.smarthome.core.thing.binding.BaseThingHandler;
+import org.eclipse.smarthome.core.thing.binding.builder.ChannelBuilder;
+import org.eclipse.smarthome.core.thing.binding.builder.ThingBuilder;
+import org.eclipse.smarthome.core.thing.type.ChannelTypeUID;
 import org.eclipse.smarthome.core.types.Command;
 import org.eclipse.smarthome.core.types.RefreshType;
 import org.eclipse.smarthome.core.types.State;
@@ -51,20 +62,44 @@ import org.slf4j.LoggerFactory;
 public abstract class OwBaseThingHandler extends BaseThingHandler {
     private final Logger logger = LoggerFactory.getLogger(OwBaseThingHandler.class);
 
-    protected int sensorCount;
+    protected static final int PROPERTY_UPDATE_INTERVAL = 5000; // in ms
+    protected static final int PROPERTY_UPDATE_MAX_RETRY = 5;
+
+    private static final Set<String> REQUIRED_PROPERTIES = Collections
+            .unmodifiableSet(Stream.of(PROPERTY_MODELID, PROPERTY_VENDOR).collect(Collectors.toSet()));
+
+    protected List<String> requiredProperties = new ArrayList<>(REQUIRED_PROPERTIES);
+    protected Set<OwSensorType> supportedSensorTypes;
 
     protected final List<AbstractOwDevice> sensors = new ArrayList<AbstractOwDevice>();
-    protected final List<String> sensorIds = new ArrayList<String>();
+    protected @NonNullByDefault({}) SensorId sensorId;
+    protected @NonNullByDefault({}) OwSensorType sensorType;
+
     protected long lastRefresh = 0;
     protected long refreshInterval = 300 * 1000;
+
     protected boolean validConfig = false;
     protected boolean showPresence = false;
 
     protected OwDynamicStateDescriptionProvider dynamicStateDescriptionProvider;
 
-    public OwBaseThingHandler(Thing thing, OwDynamicStateDescriptionProvider dynamicStateDescriptionProvider) {
+    protected @Nullable ScheduledFuture<?> updateTask;
+
+    public OwBaseThingHandler(Thing thing, OwDynamicStateDescriptionProvider dynamicStateDescriptionProvider,
+            Set<OwSensorType> supportedSensorTypes) {
         super(thing);
+
         this.dynamicStateDescriptionProvider = dynamicStateDescriptionProvider;
+        this.supportedSensorTypes = supportedSensorTypes;
+    }
+
+    public OwBaseThingHandler(Thing thing, OwDynamicStateDescriptionProvider dynamicStateDescriptionProvider,
+            Set<OwSensorType> supportedSensorTypes, Set<String> requiredProperties) {
+        super(thing);
+
+        this.dynamicStateDescriptionProvider = dynamicStateDescriptionProvider;
+        this.supportedSensorTypes = supportedSensorTypes;
+        this.requiredProperties.addAll(requiredProperties);
     }
 
     @Override
@@ -88,23 +123,19 @@ public abstract class OwBaseThingHandler extends BaseThingHandler {
             updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.CONFIGURATION_ERROR, "bridge missing");
             return false;
         }
+        sensors.clear();
 
-        sensorCount = Integer.valueOf(properties.get(PROPERTY_SENSORCOUNT));
-        for (int i = 0; i < sensorCount; i++) {
-            String configKey = (i == 0) ? CONFIG_ID : CONFIG_ID + String.valueOf(i);
-            if (configuration.get(configKey) != null) {
-                String sensorId = (String) configuration.get(configKey);
-                if (SENSOR_ID_PATTERN.matcher(sensorId).matches()) {
-                    sensorIds.add(sensorId);
-                } else {
-                    updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.CONFIGURATION_ERROR,
-                            "sensor id format mismatch");
-                    return false;
-                }
-            } else {
-                updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.CONFIGURATION_ERROR, "sensor id missing");
+        if (configuration.get(CONFIG_ID) != null) {
+            String sensorId = (String) configuration.get(CONFIG_ID);
+            try {
+                this.sensorId = new SensorId(sensorId);
+            } catch (IllegalArgumentException e) {
+                updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.CONFIGURATION_ERROR, "sensor id format mismatch");
                 return false;
             }
+        } else {
+            updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.CONFIGURATION_ERROR, "sensor id missing");
+            return false;
         }
 
         if (configuration.get(CONFIG_REFRESH) != null) {
@@ -115,6 +146,21 @@ public abstract class OwBaseThingHandler extends BaseThingHandler {
 
         if (thing.getChannel(CHANNEL_PRESENT) != null) {
             showPresence = true;
+        }
+
+        // check if all required properties are present. update if not
+        for (String property : requiredProperties) {
+            if (!properties.containsKey(property)) {
+                updateSensorProperties();
+                return false;
+            }
+        }
+
+        sensorType = OwSensorType.valueOf(properties.get(PROPERTY_MODELID));
+        if (!supportedSensorTypes.contains(sensorType)) {
+            updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.CONFIGURATION_ERROR,
+                    "sensor type not supported by this thing type");
+            return false;
         }
 
         lastRefresh = 0;
@@ -153,7 +199,7 @@ public abstract class OwBaseThingHandler extends BaseThingHandler {
                     return;
                 }
 
-                for (int i = 0; i < sensorCount; i++) {
+                for (int i = 0; i < sensors.size(); i++) {
                     logger.trace("refreshing sensor {} ({})", i, sensors.get(i).getSensorId());
                     sensors.get(i).refresh(bridgeHandler, forcedRefresh);
                 }
@@ -219,49 +265,51 @@ public abstract class OwBaseThingHandler extends BaseThingHandler {
 
     @Override
     public void dispose() {
-        dynamicStateDescriptionProvider.removeDescriptionsForThing(getThing().getUID());
-
-        sensorIds.clear();
-        sensors.clear();
-
+        dynamicStateDescriptionProvider.removeDescriptionsForThing(thing.getUID());
         super.dispose();
     }
 
     /**
-     * update properties of the sensor if missing
+     * add this sensor to the property update list of the bridge handler
      *
      */
     protected void updateSensorProperties() {
-        Map<String, String> properties = editProperties();
-
         Bridge bridge = getBridge();
         if (bridge == null) {
-            logger.debug("updating thing properties failed, no bridge available");
-            scheduler.schedule(() -> {
-                updateSensorProperties();
-            }, 5000, TimeUnit.MILLISECONDS);
+            updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.CONFIGURATION_ERROR, "bridge not found");
             return;
         }
 
         OwBaseBridgeHandler bridgeHandler = (OwBaseBridgeHandler) bridge.getHandler();
-        try {
-            if (bridgeHandler == null) {
-                throw new OwException("no bridge handler available");
-            }
-            OwSensorType sensorType = bridgeHandler.getType(sensorIds.get(0));
-            properties.put(PROPERTY_MODELID, sensorType.toString());
-            properties.put(PROPERTY_VENDOR, "Dallas/Maxim");
-            logger.trace("updated modelid/vendor to {} / {}", sensorType.name(), "Dallas/Maxim");
-        } catch (OwException e) {
-            logger.info("updating thing properties failed: {}", e.getMessage());
+        if (bridgeHandler == null) {
+            logger.debug("bridgehandler for {} not available for scheduling property update, retrying in 5s",
+                    thing.getUID());
             scheduler.schedule(() -> {
                 updateSensorProperties();
             }, 5000, TimeUnit.MILLISECONDS);
             return;
         }
 
-        updateProperties(properties);
-        initialize();
+        bridgeHandler.scheduleForPropertiesUpdate(thing);
+    }
+
+    /**
+     * thing specific update method for sensor properties
+     *
+     * called by the bridge handler
+     *
+     * @param bridgeHandler the bridge handler to be used
+     * @return properties to be added to the properties map
+     * @throws OwException
+     */
+    public Map<String, String> updateSensorProperties(OwBaseBridgeHandler bridgeHandler) throws OwException {
+        Map<String, String> properties = new HashMap<String, String>();
+        OwSensorType sensorType = bridgeHandler.getType(sensorId);
+        properties.put(PROPERTY_MODELID, sensorType.toString());
+        properties.put(PROPERTY_VENDOR, "Dallas/Maxim");
+        logger.trace("updated modelid/vendor to {} / {}", sensorType.name(), "Dallas/Maxim");
+
+        return properties;
     }
 
     /**
@@ -271,5 +319,79 @@ public abstract class OwBaseThingHandler extends BaseThingHandler {
      */
     public @Nullable OwDynamicStateDescriptionProvider getDynamicStateDescriptionProvider() {
         return dynamicStateDescriptionProvider;
+    }
+
+    /**
+     * remove a channel during initialization if it exists
+     *
+     * @param thingBuilder ThingBuilder of the edited thing
+     * @param channelId id of the channel
+     */
+    protected void removeChannelIfExisting(ThingBuilder thingBuilder, String channelId) {
+        if (thing.getChannel(channelId) != null) {
+            thingBuilder.withoutChannel(new ChannelUID(thing.getUID(), channelId));
+        }
+    }
+
+    /**
+     * add a channel during initialization
+     *
+     * @param thingBuilder ThingBuilder of the edited thing
+     * @param channelId id of the channel
+     * @param channelTypeUID ChannelTypeUID of the channel
+     * @return existing or created channel
+     */
+    protected Channel addChannelIfMissing(ThingBuilder thingBuilder, String channelId, ChannelTypeUID channelTypeUID) {
+        Channel channel = thing.getChannel(channelId);
+        if (channel == null) {
+            channel = ChannelBuilder
+                    .create(new ChannelUID(thing.getUID(), channelId), ACCEPTED_ITEM_TYPES_MAP.get(channelId))
+                    .withType(channelTypeUID).build();
+            thingBuilder.withChannel(channel);
+
+        }
+        return channel;
+    }
+
+    /**
+     * add a channel during initialization
+     *
+     * @param thingBuilder ThingBuilder of the edited thing
+     * @param channelId id of the channel
+     * @param channelTypeUID ChannelTypeUID of the channel
+     * @param label label string if different from ChannelTypeUID
+     * @return existing or created channel
+     */
+    protected Channel addChannelIfMissing(ThingBuilder thingBuilder, String channelId, ChannelTypeUID channelTypeUID,
+            String label) {
+        Channel channel = thing.getChannel(channelId);
+        if (channel == null) {
+            channel = ChannelBuilder
+                    .create(new ChannelUID(thing.getUID(), channelId), ACCEPTED_ITEM_TYPES_MAP.get(channelId))
+                    .withType(channelTypeUID).withLabel(label).build();
+            thingBuilder.withChannel(channel);
+        }
+        return channel;
+    }
+
+    /**
+     * add a channel during initialization
+     *
+     * @param thingBuilder ThingBuilder of the edited thing
+     * @param channelId id of the channel
+     * @param channelTypeUID ChannelTypeUID of the channel
+     * @param configuration Configuration for the channel
+     * @return existing or created channel
+     */
+    protected Channel addChannelIfMissing(ThingBuilder thingBuilder, String channelId, ChannelTypeUID channelTypeUID,
+            Configuration configuration) {
+        Channel channel = thing.getChannel(channelId);
+        if (channel == null) {
+            channel = ChannelBuilder
+                    .create(new ChannelUID(thing.getUID(), channelId), ACCEPTED_ITEM_TYPES_MAP.get(channelId))
+                    .withType(channelTypeUID).withConfiguration(configuration).build();
+            thingBuilder.withChannel(channel);
+        }
+        return channel;
     }
 }

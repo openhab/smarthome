@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -77,11 +77,11 @@ public class RuntimeRuleTest extends JavaOSGiTest {
         registerService(volatileStorageService);
         waitForAssert(() -> {
             ruleRegistry = getService(RuleRegistry.class);
-            assertThat(ruleRegistry, is(notNullValue()));
+            assertThat("RuleRegistry service not found", ruleRegistry, is(notNullValue()));
         }, 3000, 100);
         waitForAssert(() -> {
             ruleEngine = getService(RuleManager.class);
-            assertThat(ruleEngine, is(notNullValue()));
+            assertThat("RuleManager service not found", ruleEngine, is(notNullValue()));
         }, 3000, 100);
     }
 

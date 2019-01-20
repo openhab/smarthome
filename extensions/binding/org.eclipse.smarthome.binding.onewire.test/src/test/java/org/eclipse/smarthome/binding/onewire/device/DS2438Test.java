@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -166,13 +166,13 @@ public class DS2438Test extends AbstractDeviceTest {
             testDevice.enableChannel(CHANNEL_LIGHT);
             testDevice.configureChannels();
             inOrder.verify(mockThingHandler).getThing();
-            ((DS2438) testDevice).setLightSensorType(LightSensorType.ElabNetV1);
+            ((DS2438) testDevice).setLightSensorType(LightSensorType.ELABNET_V1);
             testDevice.refresh(mockBridgeHandler, true);
 
             inOrder.verify(mockBridgeHandler).readDecimalType(eq(testSensorId), any());
             inOrder.verify(mockThingHandler).postUpdate(eq(CHANNEL_LIGHT), eq(new QuantityType<>("97442 lx")));
 
-            ((DS2438) testDevice).setLightSensorType(LightSensorType.ElabNetV2);
+            ((DS2438) testDevice).setLightSensorType(LightSensorType.ELABNET_V2);
             testDevice.refresh(mockBridgeHandler, true);
 
             inOrder.verify(mockBridgeHandler).readDecimalType(eq(testSensorId), any());

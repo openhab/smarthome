@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -32,11 +32,7 @@ public class OwDeviceParameterMap {
      * @param owDeviceParameter the information for this bridge
      */
     public void set(ThingTypeUID thingTypeUID, OwDeviceParameter owDeviceParameter) {
-        if (map.containsKey(thingTypeUID)) {
-            map.replace(thingTypeUID, owDeviceParameter);
-        } else {
-            map.put(thingTypeUID, owDeviceParameter);
-        }
+        map.put(thingTypeUID, owDeviceParameter);
     }
 
     /**

@@ -153,6 +153,7 @@ Advanced options are the `turnonvalue`and the `turnoffvalue`.
 They default to 255 (equals 100%) and 0 (equals 0%) respectively.
 This value can be set individually for all DMX channels, the format is `value1,value2, ...` with values from 0 to 255.
 If less values than DMX channels are defined, the values will be re-used from the beginning (i.e. if two values are defined, value1 will be used for channel1, channel3, ... and value2 will be used for channel2, channel4, ...).
+For color things the number of values has to be a multiple of three.
 These values will be used if the thing receives an ON or OFF command. 
 
 The `dynamicturnonvalue` can be set to `true` or `false` (default).
@@ -179,6 +180,7 @@ Advanced options are the `turnonvalue`and the `turnoffvalue`.
 They default to 255 (equals 100%) and 0 (equals 0%) respectively.
 This value can be set individually for all DMX channels, the format is `value1,value2, ...` with values from 0 to 255.
 If less values than DMX channels are defined, the values will be re-used from the beginning (i.e. if two values are defined, value1 will be used for channel1, channel3, ... and value2 will be used for channel2, channel4, ...). 
+For tunable white things the number of values has to be a multiple of two.
 These values will be used if the thing receives an ON or OFF command. 
  
 The `dynamicturnonvalue` can be set to `true` or `false` (default).
@@ -203,6 +205,24 @@ The next `ON` command uses these values instead of the default (or configuration
 |mute             |(all bridges)        |Switch                | mutes the DMX output of the bridge                 |
 
 *Note:* the string send to the control channel of chaser things has to be formatted like the `steps` configuration of the chaser thing. If the new string is invalid, the old configuration will be used.
+
+## Rule Actions
+
+This binding includes a rule action, which allows to immediately change DMX channels from within rules.
+There is a separate instance for each bridge, which can be retrieved e.g. through
+
+```
+val dmxActions = getActions("dmx","dmx:sacn-bridge:mydmxbridge")
+```
+
+where the first parameter always has to be `dmx` and the second is the full Thing UID of the bridge that should be used.
+Once this action instance is retrieved, you can invoke the `sendFade(String channels, String fade, Boolean resumeAfter)` method on it:
+
+```
+dmxActions.sendFade("1:41/3","10000:255,255,255:-1", false)
+```
+
+The parameters are the same as in a chaser thing configuration.
 
 ## Full Example
 

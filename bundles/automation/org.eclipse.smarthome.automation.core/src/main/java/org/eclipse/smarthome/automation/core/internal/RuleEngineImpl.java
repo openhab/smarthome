@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -424,7 +424,7 @@ public class RuleEngineImpl implements RuleManager, RegistryChangeListener<Modul
      */
     @Reference(cardinality = ReferenceCardinality.MULTIPLE, policy = ReferencePolicy.DYNAMIC)
     protected void addModuleHandlerFactory(ModuleHandlerFactory moduleHandlerFactory) {
-        logger.debug("ModuleHandlerFactory added.");
+        logger.debug("ModuleHandlerFactory added {}", moduleHandlerFactory.getClass().getSimpleName());
         allModuleHandlerFactories.add(moduleHandlerFactory);
         Collection<String> moduleTypes = moduleHandlerFactory.getTypes();
         Set<String> notInitializedRules = null;

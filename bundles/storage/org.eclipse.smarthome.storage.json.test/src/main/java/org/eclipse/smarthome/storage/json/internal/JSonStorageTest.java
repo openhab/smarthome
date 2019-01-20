@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -45,7 +45,7 @@ public class JSonStorageTest extends JavaTest {
     }
 
     private void persistAndReadAgain() {
-        objectStorage.commitDatabase();
+        objectStorage.flush();
         waitForAssert(() -> {
             objectStorage = new JsonStorage<>(tmpFile, this.getClass().getClassLoader(), 0, 0, 0);
             DummyObject dummy = objectStorage.get("DummyObject");
@@ -120,7 +120,7 @@ public class JSonStorageTest extends JavaTest {
         String storageString1 = FileUtils.readFileToString(tmpFile);
 
         objectStorage = new JsonStorage<>(tmpFile, this.getClass().getClassLoader(), 0, 0, 0);
-        objectStorage.commitDatabase();
+        objectStorage.flush();
         String storageString2 = FileUtils.readFileToString(tmpFile);
 
         assertEquals(storageString1, storageString2);

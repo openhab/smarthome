@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -24,6 +24,7 @@ import org.eclipse.smarthome.binding.astro.internal.job.DailyJobSun;
 import org.eclipse.smarthome.binding.astro.internal.job.Job;
 import org.eclipse.smarthome.binding.astro.internal.model.Planet;
 import org.eclipse.smarthome.binding.astro.internal.model.Sun;
+import org.eclipse.smarthome.core.scheduler.CronScheduler;
 import org.eclipse.smarthome.core.thing.Thing;
 import org.eclipse.smarthome.core.thing.ThingTypeUID;
 
@@ -42,9 +43,11 @@ public class SunHandler extends AstroThingHandler {
     private final SunCalc sunCalc = new SunCalc();
     private Sun sun;
 
-    /** Constructor */
-    public SunHandler(Thing thing) {
-        super(thing);
+    /**
+     * Constructor
+     */
+    public SunHandler(Thing thing, CronScheduler scheduler) {
+        super(thing, scheduler);
     }
 
     @Override
@@ -81,7 +84,7 @@ public class SunHandler extends AstroThingHandler {
     protected Job getDailyJob() {
         return new DailyJobSun(thing.getUID().getAsString(), this);
     }
-    
+
     private void initializeSun() {
         sun = sunCalc.getSunInfo(Calendar.getInstance(), thingConfig.getLatitude(), thingConfig.getLongitude(),
                 thingConfig.getAltitude());

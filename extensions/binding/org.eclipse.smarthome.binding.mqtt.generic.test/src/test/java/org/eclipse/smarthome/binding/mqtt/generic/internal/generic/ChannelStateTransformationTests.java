@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -106,7 +106,7 @@ public class ChannelStateTransformationTests {
 
         thingHandler.initialize();
         ChannelState channelConfig = thingHandler.getChannelState(textChannelUID);
-        assertThat(channelConfig.transformations.get(0).pattern, is(jsonPathPattern));
+        assertThat(channelConfig.transformationsIn.get(0).pattern, is(jsonPathPattern));
     }
 
     @SuppressWarnings("null")
@@ -118,7 +118,7 @@ public class ChannelStateTransformationTests {
         ChannelState channelConfig = thingHandler.getChannelState(textChannelUID);
         channelConfig.setChannelStateUpdateListener(thingHandler);
 
-        ChannelStateTransformation transformation = channelConfig.transformations.get(0);
+        ChannelStateTransformation transformation = channelConfig.transformationsIn.get(0);
 
         byte payload[] = jsonPathJSON.getBytes();
         assertThat(transformation.pattern, is(jsonPathPattern));

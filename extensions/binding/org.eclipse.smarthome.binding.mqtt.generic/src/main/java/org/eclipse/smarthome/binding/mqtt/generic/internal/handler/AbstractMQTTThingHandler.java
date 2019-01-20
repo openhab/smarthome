@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -225,7 +225,7 @@ public abstract class AbstractMQTTThingHandler extends BaseThingHandler implemen
     }
 
     @Override
-    public void postChannelState(ChannelUID channelUID, Command command) {
+    public void postChannelCommand(ChannelUID channelUID, Command command) {
         postCommand(channelUID, command);
     }
 }
